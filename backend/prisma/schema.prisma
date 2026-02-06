@@ -1,0 +1,114 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  phone     String   @unique
+  password  String
+  name      String
+  company   String?
+  role      String   @default("user") // "user" | "admin"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projects  Project[]
+}
+
+model Project {
+  id          Int      @id @default(autoincrement())
+  title       String
+  address     String?
+  status      String   @default("ongoing") // "ongoing" | "completed" | "frozen"
+  budget      Float    @default(0)
+  startDate   DateTime @default(now())
+  
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id])
+
+  employees   Employee[]
+  tasks       Task[]
+  stages      Stage[]
+  transactions Transaction[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Stage {
+  id        Int      @id @default(autoincrement())
+  title     String
+  budget    Float    @default(0)
+  status    String   @default("planned") // "planned" | "in_progress" | "completed"
+  
+  projectId Int
+  project   Project  @relation(fields: [projectId], references: [id])
+  
+  transactions Transaction[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Employee {
+  id        Int      @id @default(autoincrement())
+  name      String
+  role      String   // position/role
+  phone     String?
+  telegram  String?
+  whatsapp  String?
+  max       String?  // MAX messenger username
+  status    String   @default("active") // "active" | "archived"
+  avatar    String?
+  
+  userId    Int      // Owner of this employee record
+  
+  projectId Int?
+  project   Project? @relation(fields: [projectId], references: [id])
+  
+  tasks     Task[]   @relation("AssignedTasks")
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Task {
+  id          Int       @id @default(autoincrement())
+  title       String
+  description String?
+  status      String    @default("todo") // "draft" | "todo" | "in_progress" | "completed" | "cancelled"
+  priority    String    @default("medium") // "low" | "medium" | "high"
+  dueDate     DateTime?
+  
+  userId      Int       // Owner
+  
+  projectId   Int
+  project     Project   @relation(fields: [projectId], references: [id])
+  
+  assigneeId  Int?
+  assignee    Employee? @relation("AssignedTasks", fields: [assigneeId], references: [id])
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Transaction {
+  id          Int      @id @default(autoincrement())
+  type        String   // "expense" | "income"
+  amount      Float
+  category    String   // "materials" | "labor" | "other"
+  description String?
+  date        DateTime @default(now())
+  receipt     String?  // URL to receipt image/file
+
+  projectId   Int
+  project     Project  @relation(fields: [projectId], references: [id])
+  
+  stageId     Int?
+  stage       Stage?   @relation(fields: [stageId], references: [id])
+}
