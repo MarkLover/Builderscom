@@ -1,28 +1,12 @@
-# Деплой Builders на сервер 89.104.94.148 (стройка.website)
+# Деплой Builders на сервер 89.104.94.148 (через GitHub)
 
-Этот гайд содержит готовые команды. Просто копируйте их в терминал.
+Подключитесь к серверу через SSH: `ssh root@89.104.94.148`
 
-## 1. Подготовка
+## 1. Установка зависимостей (на сервере)
 
-**На вашем компьютере** (где лежит проект):
-Откройте PowerShell и скопируйте проект на сервер:
-```powershell
-# Замените 'root' на имя пользователя вашего сервера, если оно другое
-scp -r "e:\Projects MAIN\Builders\*" root@89.104.94.148:/var/www/builders/
-```
-
-**На сервере** (подключитесь через SSH):
+Выполните блок команд целиком (копируйте и вставляйте):
 ```bash
-ssh root@89.104.94.148
-```
-
----
-
-## 2. Установка зависимостей (на сервере)
-
-Выполните блок команд целиком:
-```bash
-# Обновление и установка Node.js 20, Nginx, Git, Certbot
+# Обновление и установка Node.js 20, Nginx, Git, Certbot, PostgreSQL
 sudo apt update && sudo apt upgrade -y
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt install -y nodejs nginx git certbot python3-certbot-nginx postgresql postgresql-contrib
@@ -31,16 +15,16 @@ sudo npm install -g pm2
 
 ---
 
-## 3. Настройка Базы Данных
+## 2. Настройка Базы Данных
 
 1. Войдите в Postgres console:
 ```bash
 sudo -u postgres psql
 ```
 
-2. Скопируйте SQL команды (замените `ПРИДУМАЙТЕ_ПАРОЛЬ` на ваш пароль):
+2. Вставьте SQL команды (Пароль уже прописан):
 ```sql
-CREATE USER builders_user WITH PASSWORD 'ПРИДУМАЙТЕ_ПАРОЛЬ';
+CREATE USER builders_user WITH PASSWORD 'BuildersStrongPass2026!';
 CREATE DATABASE builders OWNER builders_user;
 GRANT ALL PRIVILEGES ON DATABASE builders TO builders_user;
 \q
@@ -48,31 +32,40 @@ GRANT ALL PRIVILEGES ON DATABASE builders TO builders_user;
 
 ---
 
-## 4. Настройка Backend
+## 3. Скачивание проекта (GitHub)
 
 ```bash
-# Переходим в папку бэкенда
-cd /var/www/builders/backend
+# Создаем папку
+sudo mkdir -p /var/www/builders
+sudo chown -R $USER:$USER /var/www/builders
 
-# Ставим зависимости
+# Клонируем репозиторий
+git clone https://github.com/MarkLover/Builderscom.git /var/www/builders
+```
+
+---
+
+## 4. Настройка Backend (и секретов)
+
+```bash
+cd /var/www/builders/backend
 npm install
 
-# Создаем .env файл
+# === СОЗДАЕМ СЕКРЕТНЫЙ ФАЙЛ ===
 nano .env
 ```
 
-**Вставьте в nano (CTRL+V), заменив `ПРИДУМАЙТЕ_ПАРОЛЬ`:**
+**Вставьте это в редактор nano (Пароль совпадает с БД):**
 ```env
-DATABASE_URL="postgresql://builders_user:ПРИДУМАЙТЕ_ПАРОЛЬ@localhost:5432/builders"
+DATABASE_URL="postgresql://builders_user:BuildersStrongPass2026!@localhost:5432/builders"
 JWT_SECRET="slkdfjlsdkfj309485039485039485039485sdklfjsldkfj"
 PORT=3001
 NODE_ENV=production
 ```
-*(Нажмите `Ctrl+X`, затем `Y`, затем `Enter` для сохранения)*
+*(Чтобы сохранить: Ctrl+X, потом Y, потом Enter)*
 
 **Запуск:**
 ```bash
-# Миграции и сборка
 npx prisma db push
 npx prisma generate
 npm run build
@@ -80,24 +73,23 @@ npm run build
 
 ---
 
-## 5. Настройка Frontend
+## 5. Настройка Frontend (и секретов)
 
 ```bash
 cd /var/www/builders/Folder\ 2
-# Если папка называется просто frontend, используйте: cd /var/www/builders/frontend
+# Или: cd /var/www/builders/frontend
 
-# Ставим зависимости
 npm install
 
-# Создаем конфиг для продакшена
+# === СОЗДАЕМ CONFIG ДЛЯ ПРОДАКШЕНА ===
 nano .env.production
 ```
 
-**Вставьте содержимое:**
+**Вставьте это:**
 ```env
 VITE_API_URL=https://xn--80ardojfh.website/api
 ```
-*(Сохраните: `Ctrl+X`, `Y`, `Enter`)*
+*(Сохранить: Ctrl+X, Y, Enter)*
 
 **Сборка:**
 ```bash
@@ -106,22 +98,22 @@ npm run build
 
 ---
 
-## 6. Запуск через PM2
+## 6. Запуск (PM2)
 
 ```bash
 cd /var/www/builders/backend
 
-# Запускаем сервер
+# Запускаем
 pm2 start dist/main.js --name builders-api --env production
 
-# Сохраняем для автозапуска
+# Сохраняем автозапуск
 pm2 startup
 pm2 save
 ```
 
 ---
 
-## 7. Настройка Nginx (стройка.website)
+## 7. Настройка Nginx
 
 ```bash
 sudo nano /etc/nginx/sites-available/builders
@@ -133,17 +125,13 @@ server {
     listen 80;
     server_name xn--80ardojfh.website www.xn--80ardojfh.website 89.104.94.148;
 
-    # Убедитесь что путь правильный!
-    # Если у вас папка "Folder 2", путь будет с кавычками или экранированием, но в Nginx лучше переименовать папку.
-    # ДЛЯ ПРОСТОТЫ: Давайте сделаем симлинк, выполните команду ниже после настройки Nginx
+    # Симлинк создадим ниже
     root /var/www/builders/frontend_dist;
-    
     index index.html;
 
     gzip on;
     gzip_types text/plain text/css application/json application/javascript;
 
-    # API Proxy
     location /api/ {
         proxy_pass http://127.0.0.1:3001/;
         proxy_http_version 1.1;
@@ -153,41 +141,51 @@ server {
         proxy_cache_bypass $http_upgrade;
     }
 
-    # React Router
     location / {
         try_files $uri $uri/ /index.html;
     }
 }
 ```
 
-**Примените настройки:**
-
+**Применяем:**
 ```bash
-# Создаем симлинк для папки дистрибутива (чтобы не мучиться с пробелами в Folder 2)
+# Делаем симлинк для папки dist (чтобы обойти пробел в названии Folder 2)
 ln -s "/var/www/builders/Folder 2/dist" /var/www/builders/frontend_dist
 
-# Активируем сайт
+# Включаем сайт
 sudo ln -s /etc/nginx/sites-available/builders /etc/nginx/sites-enabled/
 sudo rm /etc/nginx/sites-enabled/default
 
-# Проверяем и перезапускаем
+# Проверка и рестарт
 sudo nginx -t
 sudo systemctl restart nginx
 ```
 
 ---
 
-## 8. SSL Сертификат
+## 8. SSL (HTTPS)
 
 ```bash
+# Получаем сертификат (выберите 2 - Redirect, если спросит)
 sudo certbot --nginx -d xn--80ardojfh.website -d www.xn--80ardojfh.website
 ```
-*(Если спросит, введите Email и выберите 2 для редиректа)*
 
 ---
 
-## 9. DNS (На сайте регистратора домена)
+## 9. Обновление в будущем
 
-Добавьте **A-запись**:
-*   **Имя:** `@`
-*   **Значение:** `89.104.94.148`
+```bash
+cd /var/www/builders
+git pull
+
+# Если меняли бэкенд:
+cd backend
+npm install
+npm run build
+pm2 restart builders-api
+
+# Если меняли фронтенд:
+cd ../Folder\ 2
+npm install
+npm run build
+```
