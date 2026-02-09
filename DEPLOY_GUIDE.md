@@ -181,6 +181,8 @@ git pull
 # Если меняли бэкенд:
 cd backend
 npm install
+npx prisma db push    # Применить изменения схемы БД
+npx prisma generate   # Перегенерировать клиент
 npm run build
 pm2 restart builders-api
 
@@ -189,3 +191,48 @@ cd ../Folder\ 2
 npm install
 npm run build
 ```
+
+---
+
+## 10. GitHub Secrets (для CI/CD)
+
+Если вы используете GitHub Actions для автодеплоя, добавьте секреты:
+
+**GitHub → Репозиторий → Settings → Secrets and variables → Actions → New repository secret**
+
+| Название секрета | Значение |
+|------------------|----------|
+| `DATABASE_URL` | `postgresql://builders_user:BuildersStrongPass2026!@localhost:5432/builders` |
+| `JWT_SECRET` | (ваш секретный ключ) |
+| `SSH_HOST` | `89.104.94.148` |
+| `SSH_USER` | `root` |
+| `SSH_KEY` | (содержимое приватного SSH ключа) |
+
+> ⚠️ **Важно**: Никогда не коммитьте `.env` файл в репозиторий!
+
+---
+
+## 11. Новые API Endpoints
+
+После обновления доступны новые endpoints:
+
+### Коммерческие предложения (КП)
+| Метод | Endpoint | Описание |
+|-------|----------|----------|
+| POST | `/commercial-offers` | Создать КП |
+| GET | `/commercial-offers` | Список КП |
+| GET | `/commercial-offers/:id` | Детали КП |
+| DELETE | `/commercial-offers/:id` | Удалить КП |
+| POST | `/commercial-offers/:offerId/rooms` | Добавить комнату |
+| DELETE | `/commercial-offers/rooms/:roomId` | Удалить комнату |
+| POST | `/commercial-offers/rooms/:roomId/works` | Добавить работу |
+| DELETE | `/commercial-offers/works/:workId` | Удалить работу |
+| POST | `/commercial-offers/rooms/:roomId/materials` | Добавить материал |
+| DELETE | `/commercial-offers/materials/:materialId` | Удалить материал |
+
+### Подписки
+| Метод | Endpoint | Описание |
+|-------|----------|----------|
+| GET | `/subscriptions/status` | Статус подписки |
+| POST | `/subscriptions/activate` | Активировать подписку |
+| POST | `/subscriptions/deactivate` | Деактивировать подписку |

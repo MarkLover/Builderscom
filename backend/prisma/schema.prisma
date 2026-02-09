@@ -17,7 +17,12 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  projects  Project[]
+  // Subscription
+  subscriptionActive Boolean   @default(false)
+  subscriptionExpiry DateTime?
+
+  projects         Project[]
+  commercialOffers CommercialOffer[]
 }
 
 model Project {
@@ -111,4 +116,60 @@ model Transaction {
   
   stageId     Int?
   stage       Stage?   @relation(fields: [stageId], references: [id])
+}
+
+// Commercial Offers (КП)
+model CommercialOffer {
+  id        Int      @id @default(autoincrement())
+  address   String
+  
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  
+  rooms     CommercialOfferRoom[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CommercialOfferRoom {
+  id        Int    @id @default(autoincrement())
+  name      String
+  area      Float  @default(0)  // Floor area in m²
+  wallArea  Float  @default(0)  // Wall area in m²
+  
+  offerId   Int
+  offer     CommercialOffer @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  
+  works     CommercialOfferWork[]
+  materials CommercialOfferMaterial[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CommercialOfferWork {
+  id       Int    @id @default(autoincrement())
+  name     String
+  quantity Float
+  unit     String // "м2" | "шт" | "мп"
+  price    Float
+  
+  roomId   Int
+  room     CommercialOfferRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+}
+
+model CommercialOfferMaterial {
+  id       Int    @id @default(autoincrement())
+  name     String
+  quantity Float
+  unit     String // "шт" | "упаковок" | "кг" | "мп" | "м2"
+  price    Float
+  
+  roomId   Int
+  room     CommercialOfferRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
 }
