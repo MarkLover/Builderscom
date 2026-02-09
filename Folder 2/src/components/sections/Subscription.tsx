@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Icon from '@/components/ui/icon';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
+import { subscriptionsService, SubscriptionStatus } from '@/services/subscriptions.service';
 
 interface SubscriptionProps {
   user: any;
@@ -15,40 +16,79 @@ interface SubscriptionProps {
 
 export const Subscription = ({ user, onUpdateUser }: SubscriptionProps) => {
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus>({
+    active: user.subscriptionActive || false,
+    expiry: user.subscriptionExpiry || null,
+  });
   const { toast } = useToast();
 
-  const handleUploadReceipt = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const files = (e.currentTarget.elements.namedItem('receipt') as HTMLInputElement).files;
-    
-    if (files && files.length > 0) {
-      const expiryDate = new Date();
-      expiryDate.setMonth(expiryDate.getMonth() + 1);
-      
-      const updatedUser = {
+  // Fetch subscription status on mount
+  useEffect(() => {
+    loadSubscriptionStatus();
+  }, []);
+
+  const loadSubscriptionStatus = async () => {
+    try {
+      const status = await subscriptionsService.getStatus();
+      setSubscriptionStatus(status);
+      // Also update the user object
+      onUpdateUser({
         ...user,
-        subscriptionActive: true,
-        subscriptionExpiry: expiryDate.toISOString()
-      };
-      
-      localStorage.setItem('currentUser', JSON.stringify(updatedUser));
-      localStorage.setItem('user_' + user.phone, JSON.stringify(updatedUser));
-      onUpdateUser(updatedUser);
-      
-      setIsPaymentDialogOpen(false);
-      toast({ 
-        title: 'Подписка активирована', 
-        description: `Подписка активна до ${expiryDate.toLocaleDateString('ru-RU')}` 
+        subscriptionActive: status.active,
+        subscriptionExpiry: status.expiry,
       });
+    } catch (error) {
+      // Ignore error if user is not authenticated yet
     }
   };
 
-  const isExpiringSoon = user.subscriptionExpiry && 
-    new Date(user.subscriptionExpiry).getTime() - new Date().getTime() < 7 * 24 * 60 * 60 * 1000;
+  const handleUploadReceipt = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const files = (e.currentTarget.elements.namedItem('receipt') as HTMLInputElement).files;
 
-  const isExpired = user.subscriptionExpiry && 
-    new Date(user.subscriptionExpiry) < new Date();
+    if (files && files.length > 0) {
+      try {
+        setLoading(true);
+        // Activate subscription via API (1 month)
+        const result = await subscriptionsService.activate(1);
+
+        const updatedUser = {
+          ...user,
+          subscriptionActive: result.subscriptionActive,
+          subscriptionExpiry: result.subscriptionExpiry,
+        };
+
+        onUpdateUser(updatedUser);
+        setSubscriptionStatus({
+          active: result.subscriptionActive,
+          expiry: result.subscriptionExpiry,
+        });
+
+        setIsPaymentDialogOpen(false);
+        toast({
+          title: 'Подписка активирована',
+          description: `Подписка активна до ${new Date(result.subscriptionExpiry).toLocaleDateString('ru-RU')}`
+        });
+      } catch (error) {
+        toast({
+          title: 'Ошибка',
+          description: 'Не удалось активировать подписку',
+          variant: 'destructive'
+        });
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  const isExpiringSoon = subscriptionStatus.expiry &&
+    new Date(subscriptionStatus.expiry).getTime() - new Date().getTime() < 7 * 24 * 60 * 60 * 1000;
+
+  const isExpired = subscriptionStatus.expiry &&
+    new Date(subscriptionStatus.expiry) < new Date();
+
+  const isActive = subscriptionStatus.active && !isExpired;
 
   return (
     <div className="space-y-6">
@@ -57,28 +97,28 @@ export const Subscription = ({ user, onUpdateUser }: SubscriptionProps) => {
         <p className="text-muted-foreground">Управление вашей подпиской на ПростоСтройка</p>
       </div>
 
-      <Card className={`border-2 ${isExpired ? 'border-red-500' : isExpiringSoon ? 'border-yellow-500' : 'border-green-500'}`}>
+      <Card className={`border-2 ${isExpired ? 'border-red-500' : isExpiringSoon ? 'border-yellow-500' : isActive ? 'border-green-500' : 'border-muted'}`}>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="flex items-center gap-2">
                 Статус подписки
-                {user.subscriptionActive && !isExpired ? (
+                {isActive ? (
                   <Badge className="bg-green-500">Активна</Badge>
                 ) : (
                   <Badge variant="destructive">Не активна</Badge>
                 )}
               </CardTitle>
-              {user.subscriptionExpiry && (
+              {subscriptionStatus.expiry && (
                 <CardDescription className="mt-2">
-                  {isExpired 
-                    ? `Подписка истекла ${new Date(user.subscriptionExpiry).toLocaleDateString('ru-RU')}`
-                    : `Активна до ${new Date(user.subscriptionExpiry).toLocaleDateString('ru-RU')}`
+                  {isExpired
+                    ? `Подписка истекла ${new Date(subscriptionStatus.expiry).toLocaleDateString('ru-RU')}`
+                    : `Активна до ${new Date(subscriptionStatus.expiry).toLocaleDateString('ru-RU')}`
                   }
                 </CardDescription>
               )}
             </div>
-            {(isExpired || isExpiringSoon || !user.subscriptionActive) && (
+            {(isExpired || isExpiringSoon || !isActive) && (
               <Icon name="AlertCircle" size={32} className="text-yellow-500" />
             )}
           </div>
@@ -86,11 +126,11 @@ export const Subscription = ({ user, onUpdateUser }: SubscriptionProps) => {
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card className={!user.subscriptionActive ? 'border-2 border-primary' : ''}>
+        <Card className={!isActive ? 'border-2 border-primary' : ''}>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               Бесплатный тариф
-              {!user.subscriptionActive && <Badge>Текущий</Badge>}
+              {!isActive && <Badge>Текущий</Badge>}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -130,11 +170,11 @@ export const Subscription = ({ user, onUpdateUser }: SubscriptionProps) => {
           </CardContent>
         </Card>
 
-        <Card className={user.subscriptionActive ? 'border-2 border-primary' : ''}>
+        <Card className={isActive ? 'border-2 border-primary' : ''}>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               Платный тариф
-              {user.subscriptionActive && <Badge className="bg-green-500">Текущий</Badge>}
+              {isActive && <Badge className="bg-green-500">Текущий</Badge>}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -180,39 +220,46 @@ export const Subscription = ({ user, onUpdateUser }: SubscriptionProps) => {
               <DialogTrigger asChild>
                 <Button className="w-full" size="lg">
                   <Icon name="CreditCard" size={18} className="mr-2" />
-                  {user.subscriptionActive && !isExpired ? 'Продлить подписку' : 'Перейти на платный'}
+                  {isActive ? 'Продлить подписку' : 'Перейти на платный'}
                 </Button>
               </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Оплата подписки</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleUploadReceipt} className="space-y-4">
-                <div className="p-4 bg-muted rounded-lg space-y-2">
-                  <p className="font-semibold">Реквизиты для оплаты:</p>
-                  <p className="text-sm">Сумма: <span className="font-bold">799 ₽</span></p>
-                  <p className="text-sm text-muted-foreground">
-                    После оплаты загрузите чек или скриншот платежа
-                  </p>
-                </div>
-                
-                <div>
-                  <Label htmlFor="receipt">Чек об оплате *</Label>
-                  <Input 
-                    id="receipt" 
-                    name="receipt" 
-                    type="file" 
-                    accept="image/*,.pdf" 
-                    required 
-                  />
-                </div>
-                
-                <Button type="submit" className="w-full">
-                  Загрузить чек и активировать
-                </Button>
-              </form>
-            </DialogContent>
-          </Dialog>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Оплата подписки</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleUploadReceipt} className="space-y-4">
+                  <div className="p-4 bg-muted rounded-lg space-y-2">
+                    <p className="font-semibold">Реквизиты для оплаты:</p>
+                    <p className="text-sm">Сумма: <span className="font-bold">799 ₽</span></p>
+                    <p className="text-sm text-muted-foreground">
+                      После оплаты загрузите чек или скриншот платежа
+                    </p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="receipt">Чек об оплате *</Label>
+                    <Input
+                      id="receipt"
+                      name="receipt"
+                      type="file"
+                      accept="image/*,.pdf"
+                      required
+                    />
+                  </div>
+
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? (
+                      <>
+                        <Icon name="Loader2" size={18} className="mr-2 animate-spin" />
+                        Активация...
+                      </>
+                    ) : (
+                      'Загрузить чек и активировать'
+                    )}
+                  </Button>
+                </form>
+              </DialogContent>
+            </Dialog>
           </CardContent>
         </Card>
       </div>
@@ -224,8 +271,8 @@ export const Subscription = ({ user, onUpdateUser }: SubscriptionProps) => {
             <div className="text-sm space-y-1">
               <p className="font-medium">Информация о подписке</p>
               <p className="text-muted-foreground">
-                Подписка активируется сразу после проверки оплаты. 
-                Обычно это занимает несколько минут. 
+                Подписка активируется сразу после проверки оплаты.
+                Обычно это занимает несколько минут.
                 При возникновении вопросов свяжитесь с поддержкой.
               </p>
             </div>

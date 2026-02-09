@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Icon from '@/components/ui/icon';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,42 +6,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Badge } from '@/components/ui/badge';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
-
-interface Room {
-  id: number;
-  name: string;
-  area: number;
-  wallArea: number;
-  works: Work[];
-  materials: Material[];
-}
-
-interface Work {
-  id: number;
-  name: string;
-  quantity: number;
-  unit: 'м2' | 'шт' | 'мп';
-  price: number;
-}
-
-interface Material {
-  id: number;
-  name: string;
-  quantity: number;
-  unit: 'шт' | 'упаковок' | 'кг' | 'мп' | 'м2';
-  price: number;
-}
-
-interface CommercialOffer {
-  id: number;
-  address: string;
-  createdDate: string;
-  rooms: Room[];
-}
+import { commercialOffersService, CommercialOffer, Room, Work, Material } from '@/services/commercial-offers.service';
 
 interface CommercialOffersProps {
   user: any;
@@ -49,6 +17,7 @@ interface CommercialOffersProps {
 
 export const CommercialOffers = ({ user }: CommercialOffersProps) => {
   const [offers, setOffers] = useState<CommercialOffer[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedOffer, setSelectedOffer] = useState<number | null>(null);
   const [selectedRoom, setSelectedRoom] = useState<number | null>(null);
   const [isOfferDialogOpen, setIsOfferDialogOpen] = useState(false);
@@ -57,6 +26,23 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
   const [isMaterialDialogOpen, setIsMaterialDialogOpen] = useState(false);
   const [selectedWorkTemplate, setSelectedWorkTemplate] = useState('');
   const { toast } = useToast();
+
+  // Fetch offers on mount
+  useEffect(() => {
+    loadOffers();
+  }, []);
+
+  const loadOffers = async () => {
+    try {
+      setLoading(true);
+      const data = await commercialOffersService.getAll();
+      setOffers(data);
+    } catch (error) {
+      toast({ title: 'Ошибка', description: 'Не удалось загрузить КП', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const workTemplates = [
     { name: 'Штукатурка стен', unit: 'м2' as const, price: 450 },
@@ -117,60 +103,65 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
     }
   };
 
-  const handleAddOffer = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleAddOffer = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    
-    const newOffer: CommercialOffer = {
-      id: Date.now(),
-      address: formData.get('address') as string,
-      createdDate: new Date().toLocaleDateString('ru-RU'),
-      rooms: []
-    };
-    
-    setOffers([...offers, newOffer]);
-    setIsOfferDialogOpen(false);
-    toast({ title: 'КП создано', description: 'Коммерческое предложение успешно создано' });
+
+    try {
+      const newOffer = await commercialOffersService.create({
+        address: formData.get('address') as string,
+      });
+      setOffers([newOffer, ...offers]);
+      setIsOfferDialogOpen(false);
+      toast({ title: 'КП создано', description: 'Коммерческое предложение успешно создано' });
+    } catch (error) {
+      toast({ title: 'Ошибка', description: 'Не удалось создать КП', variant: 'destructive' });
+    }
   };
 
-  const handleAddRoom = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleAddRoom = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!selectedOffer) return;
+
     const formData = new FormData(e.currentTarget);
-    
-    const newRoom: Room = {
-      id: Date.now(),
-      name: formData.get('name') as string,
-      area: Number(formData.get('area')),
-      wallArea: Number(formData.get('wallArea')),
-      works: [],
-      materials: []
-    };
-    
-    setOffers(offers.map(offer => 
-      offer.id === selectedOffer 
-        ? { ...offer, rooms: [...offer.rooms, newRoom] }
-        : offer
-    ));
-    
-    setIsRoomDialogOpen(false);
-    toast({ title: 'Помещение добавлено', description: `${newRoom.name} успешно добавлено` });
+
+    try {
+      const newRoom = await commercialOffersService.addRoom(selectedOffer, {
+        name: formData.get('name') as string,
+        area: Number(formData.get('area')),
+        wallArea: Number(formData.get('wallArea')),
+      });
+
+      setOffers(offers.map(offer =>
+        offer.id === selectedOffer
+          ? { ...offer, rooms: [...offer.rooms, newRoom] }
+          : offer
+      ));
+
+      setIsRoomDialogOpen(false);
+      toast({ title: 'Помещение добавлено', description: `${newRoom.name} успешно добавлено` });
+    } catch (error) {
+      toast({ title: 'Ошибка', description: 'Не удалось добавить помещение', variant: 'destructive' });
+    }
   };
 
-  const handleAddWork = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleAddWork = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!selectedRoom) return;
+
     const formData = new FormData(e.currentTarget);
-    
-    const newWork: Work = {
-      id: Date.now(),
-      name: formData.get('name') as string,
-      quantity: Number(formData.get('quantity')),
-      unit: formData.get('unit') as 'м2' | 'шт' | 'мп',
-      price: Number(formData.get('price'))
-    };
-    
-    setOffers(offers.map(offer => 
-      offer.id === selectedOffer
-        ? {
+
+    try {
+      const newWork = await commercialOffersService.addWork(selectedRoom, {
+        name: formData.get('name') as string,
+        quantity: Number(formData.get('quantity')),
+        unit: formData.get('unit') as string,
+        price: Number(formData.get('price')),
+      });
+
+      setOffers(offers.map(offer =>
+        offer.id === selectedOffer
+          ? {
             ...offer,
             rooms: offer.rooms.map(room =>
               room.id === selectedRoom
@@ -178,28 +169,33 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
                 : room
             )
           }
-        : offer
-    ));
-    
-    setIsWorkDialogOpen(false);
-    toast({ title: 'Работа добавлена', description: `${newWork.name} добавлена в помещение` });
+          : offer
+      ));
+
+      setIsWorkDialogOpen(false);
+      toast({ title: 'Работа добавлена', description: `${newWork.name} добавлена в помещение` });
+    } catch (error) {
+      toast({ title: 'Ошибка', description: 'Не удалось добавить работу', variant: 'destructive' });
+    }
   };
 
-  const handleAddMaterial = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleAddMaterial = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!selectedRoom) return;
+
     const formData = new FormData(e.currentTarget);
-    
-    const newMaterial: Material = {
-      id: Date.now(),
-      name: formData.get('name') as string,
-      quantity: Number(formData.get('quantity')),
-      unit: formData.get('unit') as 'шт' | 'упаковок' | 'кг' | 'мп' | 'м2',
-      price: Number(formData.get('price'))
-    };
-    
-    setOffers(offers.map(offer => 
-      offer.id === selectedOffer
-        ? {
+
+    try {
+      const newMaterial = await commercialOffersService.addMaterial(selectedRoom, {
+        name: formData.get('name') as string,
+        quantity: Number(formData.get('quantity')),
+        unit: formData.get('unit') as string,
+        price: Number(formData.get('price')),
+      });
+
+      setOffers(offers.map(offer =>
+        offer.id === selectedOffer
+          ? {
             ...offer,
             rooms: offer.rooms.map(room =>
               room.id === selectedRoom
@@ -207,11 +203,14 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
                 : room
             )
           }
-        : offer
-    ));
-    
-    setIsMaterialDialogOpen(false);
-    toast({ title: 'Материал добавлен', description: `${newMaterial.name} добавлен в помещение` });
+          : offer
+      ));
+
+      setIsMaterialDialogOpen(false);
+      toast({ title: 'Материал добавлен', description: `${newMaterial.name} добавлен в помещение` });
+    } catch (error) {
+      toast({ title: 'Ошибка', description: 'Не удалось добавить материал', variant: 'destructive' });
+    }
   };
 
   const calculateRoomTotal = (room: Room) => {
@@ -224,37 +223,41 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
     return offer.rooms.reduce((sum, room) => sum + calculateRoomTotal(room), 0);
   };
 
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString('ru-RU');
+  };
+
   const exportToPDF = (offer: CommercialOffer) => {
     const doc = new jsPDF();
-    
+
     doc.addFont('https://cdn.jsdelivr.net/npm/dejavu-fonts-ttf@2.37.3/ttf/DejaVuSans.ttf', 'DejaVuSans', 'normal');
     doc.setFont('DejaVuSans');
-    
+
     doc.setFontSize(18);
     doc.text('Коммерческое предложение', 14, 20);
-    
+
     doc.setFontSize(12);
     doc.text(`Адрес: ${offer.address}`, 14, 30);
-    doc.text(`Дата: ${offer.createdDate}`, 14, 37);
-    
+    doc.text(`Дата: ${formatDate(offer.createdAt)}`, 14, 37);
+
     let yPosition = 50;
-    
+
     offer.rooms.forEach((room, roomIndex) => {
       if (yPosition > 250) {
         doc.addPage();
         yPosition = 20;
       }
-      
+
       doc.setFontSize(14);
       doc.setFont('DejaVuSans', 'bold');
       doc.text(`${roomIndex + 1}. ${room.name}`, 14, yPosition);
       yPosition += 7;
-      
+
       doc.setFontSize(10);
       doc.setFont('DejaVuSans', 'normal');
       doc.text(`Площадь пола: ${room.area} м² | Площадь стен: ${room.wallArea} м²`, 14, yPosition);
       yPosition += 10;
-      
+
       if (room.works.length > 0) {
         const workRows = room.works.map(work => [
           work.name,
@@ -262,7 +265,7 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
           `${work.price.toLocaleString('ru-RU', { minimumFractionDigits: 2 })} ₽`,
           `${(work.quantity * work.price).toLocaleString('ru-RU', { minimumFractionDigits: 2 })} ₽`
         ]);
-        
+
         autoTable(doc, {
           startY: yPosition,
           head: [['Работа', 'Количество', 'Цена', 'Сумма']],
@@ -272,10 +275,10 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
           bodyStyles: { font: 'DejaVuSans' },
           styles: { fontSize: 9 }
         });
-        
+
         yPosition = (doc as any).lastAutoTable.finalY + 5;
       }
-      
+
       if (room.materials.length > 0) {
         const materialRows = room.materials.map(material => [
           material.name,
@@ -283,7 +286,7 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
           `${material.price.toLocaleString('ru-RU', { minimumFractionDigits: 2 })} ₽`,
           `${(material.quantity * material.price).toLocaleString('ru-RU', { minimumFractionDigits: 2 })} ₽`
         ]);
-        
+
         autoTable(doc, {
           startY: yPosition,
           head: [['Материал', 'Количество', 'Цена', 'Сумма']],
@@ -293,10 +296,10 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
           bodyStyles: { font: 'DejaVuSans' },
           styles: { fontSize: 9 }
         });
-        
+
         yPosition = (doc as any).lastAutoTable.finalY + 5;
       }
-      
+
       doc.setFontSize(11);
       doc.setFont('DejaVuSans', 'bold');
       doc.text(
@@ -306,12 +309,12 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
       );
       yPosition += 10;
     });
-    
+
     if (yPosition > 260) {
       doc.addPage();
       yPosition = 20;
     }
-    
+
     doc.setFontSize(14);
     doc.setFont('DejaVuSans', 'bold');
     doc.text(
@@ -319,23 +322,23 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
       14,
       yPosition
     );
-    
-    doc.save(`КП_${offer.address}_${offer.createdDate}.pdf`);
+
+    doc.save(`КП_${offer.address}_${formatDate(offer.createdAt)}.pdf`);
     toast({ title: 'PDF создан', description: 'Коммерческое предложение экспортировано в PDF' });
   };
 
   const exportToExcel = (offer: CommercialOffer) => {
     const workbook = XLSX.utils.book_new();
-    
-    const summaryData = [
+
+    const summaryData: any[][] = [
       ['КОММЕРЧЕСКОЕ ПРЕДЛОЖЕНИЕ'],
       [],
       ['Адрес:', offer.address],
-      ['Дата:', offer.createdDate],
+      ['Дата:', formatDate(offer.createdAt)],
       [],
       ['Помещение', 'Площадь пола, м²', 'Площадь стен, м²', 'Сумма, ₽']
     ];
-    
+
     offer.rooms.forEach(room => {
       summaryData.push([
         room.name,
@@ -344,13 +347,13 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
         calculateRoomTotal(room).toFixed(2)
       ]);
     });
-    
+
     summaryData.push([]);
     summaryData.push(['ОБЩАЯ СУММА:', '', '', calculateOfferTotal(offer).toFixed(2)]);
-    
+
     const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
     XLSX.utils.book_append_sheet(workbook, summarySheet, 'Сводка');
-    
+
     offer.rooms.forEach((room, index) => {
       const roomData: any[][] = [
         [`Помещение: ${room.name}`],
@@ -359,7 +362,7 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
         ['РАБОТЫ'],
         ['Название', 'Количество', 'Ед. изм.', 'Цена, ₽', 'Сумма, ₽']
       ];
-      
+
       room.works.forEach(work => {
         roomData.push([
           work.name,
@@ -369,14 +372,14 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
           (work.quantity * work.price).toFixed(2)
         ]);
       });
-      
+
       const worksTotal = room.works.reduce((sum, work) => sum + (work.quantity * work.price), 0);
       roomData.push(['', '', '', 'Итого работы:', worksTotal.toFixed(2)]);
-      
+
       roomData.push([]);
       roomData.push(['МАТЕРИАЛЫ']);
       roomData.push(['Название', 'Количество', 'Ед. изм.', 'Цена, ₽', 'Сумма, ₽']);
-      
+
       room.materials.forEach(material => {
         roomData.push([
           material.name,
@@ -386,22 +389,30 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
           (material.quantity * material.price).toFixed(2)
         ]);
       });
-      
+
       const materialsTotal = room.materials.reduce((sum, material) => sum + (material.quantity * material.price), 0);
       roomData.push(['', '', '', 'Итого материалы:', materialsTotal.toFixed(2)]);
-      
+
       roomData.push([]);
       roomData.push(['', '', '', 'ИТОГО ПО ПОМЕЩЕНИЮ:', calculateRoomTotal(room).toFixed(2)]);
-      
+
       const roomSheet = XLSX.utils.aoa_to_sheet(roomData);
       XLSX.utils.book_append_sheet(workbook, roomSheet, `${index + 1}. ${room.name.substring(0, 25)}`);
     });
-    
-    XLSX.writeFile(workbook, `КП_${offer.address}_${offer.createdDate}.xlsx`);
+
+    XLSX.writeFile(workbook, `КП_${offer.address}_${formatDate(offer.createdAt)}.xlsx`);
     toast({ title: 'Excel создан', description: 'Коммерческое предложение экспортировано в Excel' });
   };
 
   const currentOffer = selectedOffer ? offers.find(o => o.id === selectedOffer) : null;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Icon name="Loader2" size={32} className="animate-spin" />
+      </div>
+    );
+  }
 
   if (currentOffer) {
     return (
@@ -413,7 +424,7 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
               Назад к списку
             </Button>
             <h2 className="text-2xl font-bold">{currentOffer.address}</h2>
-            <p className="text-muted-foreground">Создано: {currentOffer.createdDate}</p>
+            <p className="text-muted-foreground">Создано: {formatDate(currentOffer.createdAt)}</p>
           </div>
           <div className="text-right">
             <p className="text-sm text-muted-foreground">Общая сумма</p>
@@ -495,8 +506,8 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
                     </h4>
                     <Dialog open={isWorkDialogOpen} onOpenChange={setIsWorkDialogOpen}>
                       <DialogTrigger asChild>
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
                           variant="outline"
                           onClick={() => setSelectedRoom(room.id)}
                         >
@@ -511,8 +522,8 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
                         <form id="workForm" onSubmit={handleAddWork} className="space-y-4">
                           <div>
                             <Label htmlFor="workTemplate">Выбрать из списка</Label>
-                            <select 
-                              id="workTemplate" 
+                            <select
+                              id="workTemplate"
                               className="w-full border rounded-lg px-3 py-2 text-sm"
                               value={selectedWorkTemplate}
                               onChange={(e) => handleWorkTemplateChange(e.target.value)}
@@ -626,8 +637,8 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
                     </h4>
                     <Dialog open={isMaterialDialogOpen} onOpenChange={setIsMaterialDialogOpen}>
                       <DialogTrigger asChild>
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
                           variant="outline"
                           onClick={() => setSelectedRoom(room.id)}
                         >
@@ -727,11 +738,11 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
             <form onSubmit={handleAddOffer} className="space-y-4">
               <div>
                 <Label htmlFor="address">Адрес объекта *</Label>
-                <Input 
-                  id="address" 
-                  name="address" 
-                  placeholder="г. Москва, ул. Ленина, д. 15, кв. 42" 
-                  required 
+                <Input
+                  id="address"
+                  name="address"
+                  placeholder="г. Москва, ул. Ленина, д. 15, кв. 42"
+                  required
                 />
               </div>
               <Button type="submit" className="w-full">Создать КП</Button>
@@ -750,8 +761,8 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
           </Card>
         ) : (
           offers.map(offer => (
-            <Card 
-              key={offer.id} 
+            <Card
+              key={offer.id}
               className="cursor-pointer hover:shadow-lg transition-shadow"
               onClick={() => setSelectedOffer(offer.id)}
             >
@@ -763,7 +774,7 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
                       {offer.address}
                     </CardTitle>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Создано: {offer.createdDate} • Помещений: {offer.rooms.length}
+                      Создано: {formatDate(offer.createdAt)} • Помещений: {offer.rooms.length}
                     </p>
                   </div>
                   <div className="text-right">
