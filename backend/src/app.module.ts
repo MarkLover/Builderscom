@@ -9,6 +9,7 @@ import { EmployeesModule } from './employees/employees.module';
 import { TasksModule } from './tasks/tasks.module';
 import { CommercialOffersModule } from './commercial-offers/commercial-offers.module';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
+import { CompanyUsersModule } from './company-users/company-users.module';
 
 @Module({
   imports: [
@@ -20,9 +21,9 @@ import { SubscriptionsModule } from './subscriptions/subscriptions.module';
     TasksModule,
     CommercialOffersModule,
     SubscriptionsModule,
+    CompanyUsersModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
 export class AppModule { }
-

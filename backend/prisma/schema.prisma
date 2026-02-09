@@ -23,7 +23,34 @@ model User {
 
   projects         Project[]
   commercialOffers CommercialOffer[]
+  companyUsers     CompanyUser[]
 }
+
+// Company Users (employees with limited access)
+model CompanyUser {
+  id        Int      @id @default(autoincrement())
+  phone     String   @unique
+  password  String
+  name      String
+  role      String   // e.g. "Менеджер", "Прораб"
+  
+  ownerId   Int
+  owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  
+  // Permissions
+  canDashboard   Boolean @default(true)
+  canProjects    Boolean @default(true)
+  canFinances    Boolean @default(false)
+  canCommercial  Boolean @default(false)
+  canEmployees   Boolean @default(false)
+  canTasks       Boolean @default(true)
+  canProfile     Boolean @default(false)
+  canSubscription Boolean @default(false)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 
 model Project {
   id          Int      @id @default(autoincrement())
