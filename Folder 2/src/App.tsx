@@ -12,6 +12,8 @@ import Employees from "./pages/Employees";
 import Tasks from "./pages/Tasks";
 import Finances from "./pages/Finances";
 import Profile from "./pages/Profile";
+import Commercial from "./pages/Commercial";
+import SubscriptionPage from "./pages/SubscriptionPage";
 import { Layout } from "@/components/layout/Layout";
 
 const queryClient = new QueryClient();
@@ -33,8 +35,8 @@ const App = () => (
             <Route path="tasks" element={<Tasks />} />
             <Route path="finances" element={<Finances />} />
             <Route path="profile" element={<Profile />} />
-            <Route path="commercial" element={<div>Commercial Proposals (Coming Soon)</div>} />
-            <Route path="subscription" element={<div>Subscription Page (Coming Soon)</div>} />
+            <Route path="commercial" element={<Commercial />} />
+            <Route path="subscription" element={<SubscriptionPage />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
