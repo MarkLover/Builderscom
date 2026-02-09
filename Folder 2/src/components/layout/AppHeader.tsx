@@ -64,26 +64,23 @@ export const AppHeader = () => {
               <span className="max-md:hidden">Объекты</span>
             </Button>
 
-            {user.accountType === 'business' && (
-              <>
-                <Button
-                  variant={isActive('/finances') ? 'default' : 'ghost'}
-                  onClick={() => navigate('/finances')}
-                  className="max-md:flex-row-reverse"
-                >
-                  <Icon name="DollarSign" size={18} className="md:mr-2" />
-                  <span className="max-md:hidden">Финансы</span>
-                </Button>
-                <Button
-                  variant={isActive('/commercial') ? 'default' : 'ghost'}
-                  onClick={() => navigate('/commercial')}
-                  className="max-md:flex-row-reverse"
-                >
-                  <Icon name="FileText" size={18} className="md:mr-2" />
-                  <span className="max-md:hidden">КП</span>
-                </Button>
-              </>
-            )}
+            <Button
+              variant={isActive('/finances') ? 'default' : 'ghost'}
+              onClick={() => navigate('/finances')}
+              className="max-md:flex-row-reverse"
+            >
+              <Icon name="DollarSign" size={18} className="md:mr-2" />
+              <span className="max-md:hidden">Финансы</span>
+            </Button>
+
+            <Button
+              variant={isActive('/commercial') ? 'default' : 'ghost'}
+              onClick={() => navigate('/commercial')}
+              className="max-md:flex-row-reverse"
+            >
+              <Icon name="FileText" size={18} className="md:mr-2" />
+              <span className="max-md:hidden">КП</span>
+            </Button>
 
             <Button
               variant={isActive('/employees') ? 'default' : 'ghost'}
@@ -112,16 +109,15 @@ export const AppHeader = () => {
               <span className="max-md:hidden">Профиль</span>
             </Button>
 
-            {user.accountType === 'business' && (
-              <Button
-                variant={isActive('/subscription') ? 'default' : 'ghost'}
-                onClick={() => navigate('/subscription')}
-                className="max-md:flex-row-reverse"
-              >
-                <Icon name="CreditCard" size={18} className="md:mr-2" />
-                <span className="max-md:hidden">Подписка</span>
-              </Button>
-            )}
+            <Button
+              variant={isActive('/subscription') ? 'default' : 'ghost'}
+              onClick={() => navigate('/subscription')}
+              className="max-md:flex-row-reverse"
+            >
+              <Icon name="CreditCard" size={18} className="md:mr-2" />
+              <span className="max-md:hidden">Подписка</span>
+            </Button>
+
 
             <Button
               variant="ghost"
