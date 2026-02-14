@@ -228,10 +228,23 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
     return new Date(dateStr).toLocaleDateString('ru-RU');
   };
 
-  const exportToPDF = (offer: CommercialOffer) => {
-    const doc = new jsPDF();
+  const exportToPDF = async (offer: CommercialOffer) => {
+    // Fetch Cyrillic font and convert to base64 for jsPDF
+    let fontBase64: string;
+    try {
+      const fontResponse = await fetch('https://cdn.jsdelivr.net/npm/dejavu-fonts-ttf@2.37.3/ttf/DejaVuSans.ttf');
+      const fontBuffer = await fontResponse.arrayBuffer();
+      fontBase64 = btoa(
+        new Uint8Array(fontBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+      );
+    } catch {
+      toast({ title: 'Ошибка', description: 'Не удалось загрузить шрифт для PDF', variant: 'destructive' });
+      return;
+    }
 
-    doc.addFont('https://cdn.jsdelivr.net/npm/dejavu-fonts-ttf@2.37.3/ttf/DejaVuSans.ttf', 'DejaVuSans', 'normal');
+    const doc = new jsPDF();
+    doc.addFileToVFS('DejaVuSans.ttf', fontBase64);
+    doc.addFont('DejaVuSans.ttf', 'DejaVuSans', 'normal');
     doc.setFont('DejaVuSans');
 
     // Header
