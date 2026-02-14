@@ -10,6 +10,8 @@ import { TasksModule } from './tasks/tasks.module';
 import { CommercialOffersModule } from './commercial-offers/commercial-offers.module';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { CompanyUsersModule } from './company-users/company-users.module';
+import { CompanyExpensesModule } from './company-expenses/company-expenses.module';
+import { ExpenseCategoriesModule } from './expense-categories/expense-categories.module';
 
 @Module({
   imports: [
@@ -22,6 +24,8 @@ import { CompanyUsersModule } from './company-users/company-users.module';
     CommercialOffersModule,
     SubscriptionsModule,
     CompanyUsersModule,
+    CompanyExpensesModule,
+    ExpenseCategoriesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -24,6 +24,8 @@ model User {
   projects         Project[]
   commercialOffers CommercialOffer[]
   companyUsers     CompanyUser[]
+  companyExpenses  CompanyExpense[]
+  expenseCategories ExpenseCategory[]
 }
 
 // Company Users (employees with limited access)
@@ -129,6 +131,49 @@ model Task {
   updatedAt   DateTime  @updatedAt
 }
 
+// Company Expenses (расходы компании)
+model CompanyExpense {
+  id          Int      @id @default(autoincrement())
+  description String
+  amount      Float
+  category    String   // rent | salary | fuel | taxes | other
+  date        DateTime
+  receipt     String?  // URL to file
+  
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id])
+  
+  createdAt   DateTime @default(now())
+}
+
+// Expense Categories (статьи расходов)
+model ExpenseCategory {
+  id          Int      @id @default(autoincrement())
+  name        String
+  type        String   // recurring | one-time
+  amount      Float    @default(0) // Planned amount
+  description String?
+  
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id])
+  
+  payments    CategoryPayment[]
+  
+  createdAt   DateTime @default(now())
+}
+
+model CategoryPayment {
+  id          Int      @id @default(autoincrement())
+  amount      Float
+  date        DateTime @default(now())
+  description String?
+  
+  categoryId  Int
+  category    ExpenseCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime @default(now())
+}
+
 model Transaction {
   id          Int      @id @default(autoincrement())
   type        String   // "expense" | "income"
@@ -147,8 +192,9 @@ model Transaction {
 
 // Commercial Offers (КП)
 model CommercialOffer {
-  id        Int      @id @default(autoincrement())
-  address   String
+  id           Int      @id @default(autoincrement())
+  address      String
+  customerName String?  // Customer full name
   
   userId    Int
   user      User     @relation(fields: [userId], references: [id])

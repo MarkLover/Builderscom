@@ -3,6 +3,7 @@ import api from './api';
 export interface CommercialOffer {
     id: number;
     address: string;
+    customerName?: string;
     createdAt: string;
     updatedAt: string;
     rooms: Room[];
@@ -35,6 +36,7 @@ export interface Material {
 
 export interface CreateOfferDto {
     address: string;
+    customerName?: string;
 }
 
 export interface CreateRoomDto {

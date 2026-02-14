@@ -110,6 +110,7 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
     try {
       const newOffer = await commercialOffersService.create({
         address: formData.get('address') as string,
+        customerName: formData.get('customerName') as string || undefined,
       });
       setOffers([newOffer, ...offers]);
       setIsOfferDialogOpen(false);
@@ -233,16 +234,49 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
     doc.addFont('https://cdn.jsdelivr.net/npm/dejavu-fonts-ttf@2.37.3/ttf/DejaVuSans.ttf', 'DejaVuSans', 'normal');
     doc.setFont('DejaVuSans');
 
+    // Header
     doc.setFontSize(18);
     doc.text('Коммерческое предложение', 14, 20);
 
     doc.setFontSize(12);
     doc.text(`Адрес: ${offer.address}`, 14, 30);
-    doc.text(`Дата: ${formatDate(offer.createdAt)}`, 14, 37);
+    if (offer.customerName) {
+      doc.text(`Заказчик: ${offer.customerName}`, 14, 37);
+      doc.text(`Дата: ${formatDate(offer.createdAt)}`, 14, 44);
+    } else {
+      doc.text(`Дата: ${formatDate(offer.createdAt)}`, 14, 37);
+    }
 
-    let yPosition = 50;
+    // Categorize all items
+    const categorizeItem = (name: string): 'soundproofing' | 'materials' | 'services' => {
+      const lowerName = name.toLowerCase();
+      if (lowerName.includes('звук') || lowerName.includes('шум')) return 'soundproofing';
+      return 'materials'; // Default for materials
+    };
 
-    offer.rooms.forEach((room, roomIndex) => {
+    const soundproofingItems: Array<{ name: string, qty: number, unit: string, price: number }> = [];
+    const materialItems: Array<{ name: string, qty: number, unit: string, price: number }> = [];
+    const serviceItems: Array<{ name: string, qty: number, unit: string, price: number }> = [];
+
+    // Gather all items across rooms
+    offer.rooms.forEach(room => {
+      room.materials.forEach(m => {
+        const category = categorizeItem(m.name);
+        const item = { name: m.name, qty: m.quantity, unit: m.unit, price: m.price };
+        if (category === 'soundproofing') soundproofingItems.push(item);
+        else materialItems.push(item);
+      });
+      room.works.forEach(w => {
+        serviceItems.push({ name: w.name, qty: w.quantity, unit: w.unit, price: w.price });
+      });
+    });
+
+    let yPosition = offer.customerName ? 55 : 50;
+
+    // Helper to render category table
+    const renderCategory = (title: string, items: typeof soundproofingItems, color: [number, number, number]) => {
+      if (items.length === 0) return;
+
       if (yPosition > 250) {
         doc.addPage();
         yPosition = 20;
@@ -250,66 +284,43 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
 
       doc.setFontSize(14);
       doc.setFont('DejaVuSans', 'bold');
-      doc.text(`${roomIndex + 1}. ${room.name}`, 14, yPosition);
+      doc.text(title, 14, yPosition);
       yPosition += 7;
 
+      const rows = items.map(item => [
+        item.name,
+        `${item.qty} ${item.unit}`,
+        `${item.price.toLocaleString('ru-RU', { minimumFractionDigits: 2 })} ₽`,
+        `${(item.qty * item.price).toLocaleString('ru-RU', { minimumFractionDigits: 2 })} ₽`
+      ]);
+
+      autoTable(doc, {
+        startY: yPosition,
+        head: [['Наименование', 'Кол-во', 'Цена', 'Стоимость']],
+        body: rows,
+        theme: 'grid',
+        headStyles: { fillColor: color, font: 'DejaVuSans', fontSize: 9 },
+        bodyStyles: { font: 'DejaVuSans', fontSize: 8 },
+      });
+
+      yPosition = (doc as any).lastAutoTable.finalY + 3;
+
+      const categoryTotal = items.reduce((sum, item) => sum + (item.qty * item.price), 0);
       doc.setFontSize(10);
-      doc.setFont('DejaVuSans', 'normal');
-      doc.text(`Площадь пола: ${room.area} м² | Площадь стен: ${room.wallArea} м²`, 14, yPosition);
-      yPosition += 10;
-
-      if (room.works.length > 0) {
-        const workRows = room.works.map(work => [
-          work.name,
-          `${work.quantity} ${work.unit}`,
-          `${work.price.toLocaleString('ru-RU', { minimumFractionDigits: 2 })} ₽`,
-          `${(work.quantity * work.price).toLocaleString('ru-RU', { minimumFractionDigits: 2 })} ₽`
-        ]);
-
-        autoTable(doc, {
-          startY: yPosition,
-          head: [['Работа', 'Количество', 'Цена', 'Сумма']],
-          body: workRows,
-          theme: 'grid',
-          headStyles: { fillColor: [79, 70, 229], font: 'DejaVuSans' },
-          bodyStyles: { font: 'DejaVuSans' },
-          styles: { fontSize: 9 }
-        });
-
-        yPosition = (doc as any).lastAutoTable.finalY + 5;
-      }
-
-      if (room.materials.length > 0) {
-        const materialRows = room.materials.map(material => [
-          material.name,
-          `${material.quantity} ${material.unit}`,
-          `${material.price.toLocaleString('ru-RU', { minimumFractionDigits: 2 })} ₽`,
-          `${(material.quantity * material.price).toLocaleString('ru-RU', { minimumFractionDigits: 2 })} ₽`
-        ]);
-
-        autoTable(doc, {
-          startY: yPosition,
-          head: [['Материал', 'Количество', 'Цена', 'Сумма']],
-          body: materialRows,
-          theme: 'grid',
-          headStyles: { fillColor: [34, 197, 94], font: 'DejaVuSans' },
-          bodyStyles: { font: 'DejaVuSans' },
-          styles: { fontSize: 9 }
-        });
-
-        yPosition = (doc as any).lastAutoTable.finalY + 5;
-      }
-
-      doc.setFontSize(11);
       doc.setFont('DejaVuSans', 'bold');
-      doc.text(
-        `Итого по помещению: ${calculateRoomTotal(room).toLocaleString('ru-RU', { minimumFractionDigits: 2 })} ₽`,
-        14,
-        yPosition
-      );
-      yPosition += 10;
-    });
+      doc.text(`Итого: ${categoryTotal.toLocaleString('ru-RU', { minimumFractionDigits: 2 })} ₽`, 14, yPosition);
+      doc.text(`Размер скидки: 10%`, 14, yPosition + 5);
+      const withMargin = categoryTotal * 1.1;
+      doc.text(`Итого со скидкой: ${withMargin.toLocaleString('ru-RU', { minimumFractionDigits: 2 })} ₽`, 14, yPosition + 10);
+      yPosition += 18;
+    };
 
+    // Render categories
+    renderCategory('Звукоизоляционные материалы', soundproofingItems, [100, 120, 200]);
+    renderCategory('Общестроительные материалы', materialItems, [34, 197, 94]);
+    renderCategory('Услуги', serviceItems, [79, 70, 229]);
+
+    // Grand total
     if (yPosition > 260) {
       doc.addPage();
       yPosition = 20;
@@ -317,8 +328,9 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
 
     doc.setFontSize(14);
     doc.setFont('DejaVuSans', 'bold');
+    const grandTotal = calculateOfferTotal(offer) * 1.1; // With 10% margin
     doc.text(
-      `ОБЩАЯ СУММА: ${calculateOfferTotal(offer).toLocaleString('ru-RU', { minimumFractionDigits: 2 })} ₽`,
+      `ИТОГОВАЯ СТОИМОСТЬ: ${grandTotal.toLocaleString('ru-RU', { minimumFractionDigits: 2 })} ₽`,
       14,
       yPosition
     );
@@ -334,71 +346,71 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
       ['КОММЕРЧЕСКОЕ ПРЕДЛОЖЕНИЕ'],
       [],
       ['Адрес:', offer.address],
-      ['Дата:', formatDate(offer.createdAt)],
-      [],
-      ['Помещение', 'Площадь пола, м²', 'Площадь стен, м²', 'Сумма, ₽']
     ];
 
+    if (offer.customerName) {
+      summaryData.push(['Заказчик:', offer.customerName]);
+    }
+    summaryData.push(['Дата:', formatDate(offer.createdAt)]);
+
+    // Categorize items
+    const categorizeItem = (name: string): 'soundproofing' | 'materials' | 'services' => {
+      const lowerName = name.toLowerCase();
+      if (lowerName.includes('звук') || lowerName.includes('шум')) return 'soundproofing';
+      return 'materials';
+    };
+
+    const soundproofingItems: Array<{ name: string, qty: number, unit: string, price: number }> = [];
+    const materialItems: Array<{ name: string, qty: number, unit: string, price: number }> = [];
+    const serviceItems: Array<{ name: string, qty: number, unit: string, price: number }> = [];
+
     offer.rooms.forEach(room => {
-      summaryData.push([
-        room.name,
-        room.area,
-        room.wallArea,
-        calculateRoomTotal(room).toFixed(2)
-      ]);
+      room.materials.forEach(m => {
+        const category = categorizeItem(m.name);
+        const item = { name: m.name, qty: m.quantity, unit: m.unit, price: m.price };
+        if (category === 'soundproofing') soundproofingItems.push(item);
+        else materialItems.push(item);
+      });
+      room.works.forEach(w => {
+        serviceItems.push({ name: w.name, qty: w.quantity, unit: w.unit, price: w.price });
+      });
     });
 
+    // Add categories to summary
+    const addCategoryToSummary = (title: string, items: typeof soundproofingItems) => {
+      if (items.length === 0) return;
+
+      summaryData.push([]);
+      summaryData.push([title]);
+      summaryData.push(['Наименование', 'Кол-во', 'Ед.', 'Цена, ₽', 'Стоимость, ₽']);
+
+      items.forEach(item => {
+        summaryData.push([
+          item.name,
+          item.qty,
+          item.unit,
+          item.price.toFixed(2),
+          (item.qty * item.price).toFixed(2)
+        ]);
+      });
+
+      const categoryTotal = items.reduce((sum, item) => sum + (item.qty * item.price), 0);
+      summaryData.push(['', '', '', 'Итого:', categoryTotal.toFixed(2)]);
+      summaryData.push(['', '', '', 'Размер скидки: 10%', '']);
+      const withMargin = categoryTotal * 1.1;
+      summaryData.push(['', '', '', 'Итого со скидкой:', withMargin.toFixed(2)]);
+    };
+
+    addCategoryToSummary('ЗВУКОИЗОЛЯЦИОННЫЕ МАТЕРИАЛЫ', soundproofingItems);
+    addCategoryToSummary('ОБЩЕСТРОИТЕЛЬНЫЕ МАТЕРИАЛЫ', materialItems);
+    addCategoryToSummary('УСЛУГИ', serviceItems);
+
     summaryData.push([]);
-    summaryData.push(['ОБЩАЯ СУММА:', '', '', calculateOfferTotal(offer).toFixed(2)]);
+    const grandTotal = calculateOfferTotal(offer) * 1.1;
+    summaryData.push(['ИТОГОВАЯ СТОИМОСТЬ:', '', '', '', grandTotal.toFixed(2)]);
 
     const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
     XLSX.utils.book_append_sheet(workbook, summarySheet, 'Сводка');
-
-    offer.rooms.forEach((room, index) => {
-      const roomData: any[][] = [
-        [`Помещение: ${room.name}`],
-        [`Площадь пола: ${room.area} м² | Площадь стен: ${room.wallArea} м²`],
-        [],
-        ['РАБОТЫ'],
-        ['Название', 'Количество', 'Ед. изм.', 'Цена, ₽', 'Сумма, ₽']
-      ];
-
-      room.works.forEach(work => {
-        roomData.push([
-          work.name,
-          work.quantity,
-          work.unit,
-          work.price.toFixed(2),
-          (work.quantity * work.price).toFixed(2)
-        ]);
-      });
-
-      const worksTotal = room.works.reduce((sum, work) => sum + (work.quantity * work.price), 0);
-      roomData.push(['', '', '', 'Итого работы:', worksTotal.toFixed(2)]);
-
-      roomData.push([]);
-      roomData.push(['МАТЕРИАЛЫ']);
-      roomData.push(['Название', 'Количество', 'Ед. изм.', 'Цена, ₽', 'Сумма, ₽']);
-
-      room.materials.forEach(material => {
-        roomData.push([
-          material.name,
-          material.quantity,
-          material.unit,
-          material.price.toFixed(2),
-          (material.quantity * material.price).toFixed(2)
-        ]);
-      });
-
-      const materialsTotal = room.materials.reduce((sum, material) => sum + (material.quantity * material.price), 0);
-      roomData.push(['', '', '', 'Итого материалы:', materialsTotal.toFixed(2)]);
-
-      roomData.push([]);
-      roomData.push(['', '', '', 'ИТОГО ПО ПОМЕЩЕНИЮ:', calculateRoomTotal(room).toFixed(2)]);
-
-      const roomSheet = XLSX.utils.aoa_to_sheet(roomData);
-      XLSX.utils.book_append_sheet(workbook, roomSheet, `${index + 1}. ${room.name.substring(0, 25)}`);
-    });
 
     XLSX.writeFile(workbook, `КП_${offer.address}_${formatDate(offer.createdAt)}.xlsx`);
     toast({ title: 'Excel создан', description: 'Коммерческое предложение экспортировано в Excel' });
@@ -424,6 +436,9 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
               Назад к списку
             </Button>
             <h2 className="text-2xl font-bold">{currentOffer.address}</h2>
+            {currentOffer.customerName && (
+              <p className="text-muted-foreground">Заказчик: {currentOffer.customerName}</p>
+            )}
             <p className="text-muted-foreground">Создано: {formatDate(currentOffer.createdAt)}</p>
           </div>
           <div className="text-right">
@@ -737,6 +752,14 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
             </DialogHeader>
             <form onSubmit={handleAddOffer} className="space-y-4">
               <div>
+                <Label htmlFor="customerName">Имя Фамилия заказчика</Label>
+                <Input
+                  id="customerName"
+                  name="customerName"
+                  placeholder="Иван Петров"
+                />
+              </div>
+              <div>
                 <Label htmlFor="address">Адрес объекта *</Label>
                 <Input
                   id="address"
@@ -773,6 +796,11 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
                       <Icon name="FileText" size={20} />
                       {offer.address}
                     </CardTitle>
+                    {offer.customerName && (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Заказчик: {offer.customerName}
+                      </p>
+                    )}
                     <p className="text-sm text-muted-foreground mt-1">
                       Создано: {formatDate(offer.createdAt)} • Помещений: {offer.rooms.length}
                     </p>
