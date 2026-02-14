@@ -14,9 +14,9 @@ const Onboarding = ({ userName, onComplete }: OnboardingProps) => {
   const steps = [
     {
       title: `Добро пожаловать, ${userName}!`,
-      description: 'Давайте быстро познакомимся с возможностями СтройКонтроль',
+      description: 'Давайте быстро познакомимся с возможностями ПростоСтройка',
       icon: 'Sparkles',
-      content: 'СтройКонтроль — это система для управления строительными объектами, финансами, сотрудниками и задачами. Всё в одном месте!'
+      content: 'ПростоСтройка — это система для управления строительными объектами, финансами, сотрудниками и задачами. Всё в одном месте!'
     },
     {
       title: 'Дашборд',
@@ -52,7 +52,7 @@ const Onboarding = ({ userName, onComplete }: OnboardingProps) => {
       title: 'Готово!',
       description: 'Начните работу прямо сейчас',
       icon: 'Rocket',
-      content: 'Вы готовы использовать СтройКонтроль! Создайте первый объект, добавьте сотрудников и начните контролировать свой бизнес.'
+      content: 'Вы готовы использовать ПростоСтройка! Создайте первый объект, добавьте сотрудников и начните контролировать свой бизнес.'
     }
   ];
 
@@ -94,11 +94,10 @@ const Onboarding = ({ userName, onComplete }: OnboardingProps) => {
               {steps.map((_, index) => (
                 <div
                   key={index}
-                  className={`h-2 rounded-full transition-all ${
-                    index === currentStep 
-                      ? 'w-8 bg-primary' 
+                  className={`h-2 rounded-full transition-all ${index === currentStep
+                      ? 'w-8 bg-primary'
                       : 'w-2 bg-muted'
-                  }`}
+                    }`}
                 />
               ))}
             </div>

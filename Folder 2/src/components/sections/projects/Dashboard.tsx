@@ -31,12 +31,12 @@ export const Dashboard = (props: DashboardProps) => {
                 </div>
               </div>
               <div>
-                <h3 className="text-2xl font-bold mb-2">Добро пожаловать в СтройКонтроль!</h3>
+                <h3 className="text-2xl font-bold mb-2">Добро пожаловать в ПростоСтройка!</h3>
                 <p className="text-muted-foreground">Начните управлять вашими объектами прямо сейчас</p>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl mx-auto pt-6">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="h-auto flex-col py-6 space-y-2"
                   onClick={() => setActiveSection('projects')}
                 >
@@ -46,8 +46,8 @@ export const Dashboard = (props: DashboardProps) => {
                     <div className="text-xs text-muted-foreground">Добавьте первый строительный объект</div>
                   </div>
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="h-auto flex-col py-6 space-y-2"
                   onClick={() => setActiveSection('employees')}
                 >
@@ -57,8 +57,8 @@ export const Dashboard = (props: DashboardProps) => {
                     <div className="text-xs text-muted-foreground">Внесите данные сотрудников</div>
                   </div>
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="h-auto flex-col py-6 space-y-2"
                   onClick={() => setActiveSection('finances')}
                 >
@@ -73,7 +73,7 @@ export const Dashboard = (props: DashboardProps) => {
           </CardContent>
         </Card>
       )}
-      
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white">
           <CardHeader className="pb-3">
@@ -83,7 +83,7 @@ export const Dashboard = (props: DashboardProps) => {
             <div className="text-3xl font-bold">{totalBudget.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽</div>
           </CardContent>
         </Card>
-        
+
         <Card className="bg-gradient-to-br from-red-500 to-red-600 text-white">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium opacity-90">Расходы</CardTitle>
@@ -92,7 +92,7 @@ export const Dashboard = (props: DashboardProps) => {
             <div className="text-3xl font-bold">{totalSpent.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽</div>
           </CardContent>
         </Card>
-        
+
         <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium opacity-90">Доходы</CardTitle>
@@ -114,8 +114,8 @@ export const Dashboard = (props: DashboardProps) => {
             ) : (
               <div className="space-y-3">
                 {activeProjects.map(project => (
-                  <div 
-                    key={project.id} 
+                  <div
+                    key={project.id}
                     className="p-4 border rounded-lg hover:bg-accent transition-colors cursor-pointer"
                     onClick={() => {
                       setViewingProject(project.id);

@@ -89,7 +89,7 @@ const Auth = () => {
               <Icon name="Building2" size={32} className="text-white" />
             </div>
           </div>
-          <CardTitle className="text-3xl font-bold">Стройка Онлайн</CardTitle>
+          <CardTitle className="text-3xl font-bold">ПростоСтройка</CardTitle>
           <CardDescription className="text-base">
             {isLogin ? 'Войдите в свой аккаунт' : 'Создайте аккаунт для управления объектами'}
           </CardDescription>

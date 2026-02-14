@@ -319,8 +319,9 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
         head: [['Наименование', 'Кол-во', 'Цена', 'Стоимость']],
         body: rows,
         theme: 'grid',
-        headStyles: { fillColor: color, font: 'DejaVuSans', fontSize: 9 },
-        bodyStyles: { font: 'DejaVuSans', fontSize: 8 },
+        styles: { font: 'DejaVuSans', fontStyle: 'normal' },
+        headStyles: { fillColor: color, fontStyle: 'bold', fontSize: 9 },
+        bodyStyles: { fontSize: 8 },
       });
 
       yPosition = (doc as any).lastAutoTable.finalY + 3;

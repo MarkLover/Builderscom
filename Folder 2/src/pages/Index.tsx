@@ -161,7 +161,7 @@ const Index = () => {
                   </div>
                 </div>
                 <div>
-                  <h3 className="text-2xl font-bold mb-2">Добро пожаловать в СтройКонтроль!</h3>
+                  <h3 className="text-2xl font-bold mb-2">Добро пожаловать в ПростоСтройка!</h3>
                   <p className="text-muted-foreground">Начните управлять вашими объектами прямо сейчас</p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl mx-auto pt-6">
