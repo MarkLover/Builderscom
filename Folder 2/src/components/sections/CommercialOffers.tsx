@@ -229,14 +229,19 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
   };
 
   const exportToPDF = async (offer: CommercialOffer) => {
-    // Fetch Cyrillic font and convert to base64 for jsPDF
+    // Fetch Cyrillic fonts (normal + bold) and convert to base64 for jsPDF
     let fontBase64: string;
+    let fontBoldBase64: string;
     try {
-      const fontResponse = await fetch('https://cdn.jsdelivr.net/npm/dejavu-fonts-ttf@2.37.3/ttf/DejaVuSans.ttf');
-      const fontBuffer = await fontResponse.arrayBuffer();
-      fontBase64 = btoa(
-        new Uint8Array(fontBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
-      );
+      const [normalResp, boldResp] = await Promise.all([
+        fetch('https://cdn.jsdelivr.net/npm/dejavu-fonts-ttf@2.37.3/ttf/DejaVuSans.ttf'),
+        fetch('https://cdn.jsdelivr.net/npm/dejavu-fonts-ttf@2.37.3/ttf/DejaVuSans-Bold.ttf'),
+      ]);
+      const [normalBuf, boldBuf] = await Promise.all([normalResp.arrayBuffer(), boldResp.arrayBuffer()]);
+      const toBase64 = (buf: ArrayBuffer) =>
+        btoa(new Uint8Array(buf).reduce((data, byte) => data + String.fromCharCode(byte), ''));
+      fontBase64 = toBase64(normalBuf);
+      fontBoldBase64 = toBase64(boldBuf);
     } catch {
       toast({ title: 'Ошибка', description: 'Не удалось загрузить шрифт для PDF', variant: 'destructive' });
       return;
@@ -245,6 +250,8 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
     const doc = new jsPDF();
     doc.addFileToVFS('DejaVuSans.ttf', fontBase64);
     doc.addFont('DejaVuSans.ttf', 'DejaVuSans', 'normal');
+    doc.addFileToVFS('DejaVuSans-Bold.ttf', fontBoldBase64);
+    doc.addFont('DejaVuSans-Bold.ttf', 'DejaVuSans', 'bold');
     doc.setFont('DejaVuSans');
 
     // Header

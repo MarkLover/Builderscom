@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { MoneyInput } from '@/components/ui/MoneyInput';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { projectsService } from '@/services/projects.service';
@@ -215,7 +216,7 @@ const Projects = () => {
                                 </div>
                                 <div>
                                     <Label htmlFor="budget">Бюджет (₽)</Label>
-                                    <Input id="budget" name="budget" type="number" placeholder="5000000" required />
+                                    <MoneyInput id="budget" name="budget" placeholder="5 000 000" required />
                                 </div>
                                 <Button type="submit" className="w-full" disabled={createProjectMutation.isPending}>
                                     {createProjectMutation.isPending ? 'Создание...' : 'Создать объект'}
@@ -361,7 +362,7 @@ const Projects = () => {
                     <form onSubmit={handleAddTransaction} className="space-y-4">
                         <div>
                             <Label htmlFor="amount">Сумма (₽)</Label>
-                            <Input id="amount" name="amount" type="number" step="0.01" placeholder="10000.00" required />
+                            <MoneyInput id="amount" name="amount" placeholder="10 000" required />
                         </div>
                         {transactionType === 'expense' && (
                             <div>

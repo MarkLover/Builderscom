@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { MoneyInput } from '@/components/ui/MoneyInput';
 import { Label } from '@/components/ui/label';
 
 interface CompanyExpensesCardProps {
@@ -13,11 +14,11 @@ interface CompanyExpensesCardProps {
   handleAddCompanyExpense: (e: React.FormEvent<HTMLFormElement>) => void;
 }
 
-export const CompanyExpensesCard = ({ 
-  companyExpenses, 
-  isCompanyExpenseDialogOpen, 
-  setIsCompanyExpenseDialogOpen, 
-  handleAddCompanyExpense 
+export const CompanyExpensesCard = ({
+  companyExpenses,
+  isCompanyExpenseDialogOpen,
+  setIsCompanyExpenseDialogOpen,
+  handleAddCompanyExpense
 }: CompanyExpensesCardProps) => {
   const getCategoryName = (category: string) => {
     const categories: Record<string, string> = {
@@ -55,7 +56,7 @@ export const CompanyExpensesCard = ({
                 </div>
                 <div>
                   <Label htmlFor="companyExpenseAmount">Сумма (₽)</Label>
-                  <Input id="companyExpenseAmount" name="amount" type="number" placeholder="50000" required />
+                  <MoneyInput id="companyExpenseAmount" name="amount" placeholder="50 000" required />
                 </div>
                 <div>
                   <Label htmlFor="companyExpenseCategory">Категория</Label>

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { MoneyInput } from '@/components/ui/MoneyInput';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -15,14 +16,14 @@ interface ExpenseCategoriesCardProps {
   handleAddExpenseCategory: (e: React.FormEvent<HTMLFormElement>) => void;
 }
 
-export const ExpenseCategoriesCard = ({ 
-  expenseCategories, 
-  isExpenseCategoryDialogOpen, 
-  setIsExpenseCategoryDialogOpen, 
+export const ExpenseCategoriesCard = ({
+  expenseCategories,
+  isExpenseCategoryDialogOpen,
+  setIsExpenseCategoryDialogOpen,
   setViewingCategory,
-  handleAddExpenseCategory 
+  handleAddExpenseCategory
 }: ExpenseCategoriesCardProps) => {
-  const totalCategoriesExpenses = expenseCategories.reduce((acc, cat) => 
+  const totalCategoriesExpenses = expenseCategories.reduce((acc, cat) =>
     acc + cat.payments.reduce((sum: number, p: any) => sum + p.amount, 0), 0
   );
 
@@ -56,7 +57,7 @@ export const ExpenseCategoriesCard = ({
                 </div>
                 <div>
                   <Label htmlFor="categoryAmount">Плановая сумма (₽, опционально)</Label>
-                  <Input id="categoryAmount" name="amount" type="number" placeholder="50000" />
+                  <MoneyInput id="categoryAmount" name="amount" placeholder="50 000" />
                   <p className="text-xs text-muted-foreground mt-1">Для постоянных расходов - ежемесячная сумма</p>
                 </div>
                 <div>
@@ -75,7 +76,7 @@ export const ExpenseCategoriesCard = ({
             <span className="font-semibold">Всего расходов по статьям:</span>
             <span className="text-lg font-bold text-red-600">{totalCategoriesExpenses.toLocaleString()} ₽</span>
           </div>
-          
+
           {expenseCategories.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">Статей расходов пока нет</p>
           ) : (
@@ -83,8 +84,8 @@ export const ExpenseCategoriesCard = ({
               {expenseCategories.map(category => {
                 const categoryTotal = category.payments.reduce((acc: number, p: any) => acc + p.amount, 0);
                 return (
-                  <Card 
-                    key={category.id} 
+                  <Card
+                    key={category.id}
                     className="cursor-pointer hover:shadow-md transition-shadow"
                     onClick={() => setViewingCategory(category.id)}
                   >

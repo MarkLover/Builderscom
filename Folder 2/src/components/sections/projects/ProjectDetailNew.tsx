@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { MoneyInput } from '@/components/ui/MoneyInput';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 
@@ -26,10 +27,10 @@ interface ProjectDetailNewProps {
 }
 
 export const ProjectDetailNew = (props: ProjectDetailNewProps) => {
-  const { 
-    projects, 
-    viewingProject, 
-    isStageDialogOpen, 
+  const {
+    projects,
+    viewingProject,
+    isStageDialogOpen,
     setIsStageDialogOpen,
     isStageExpenseDialogOpen,
     setIsStageExpenseDialogOpen,
@@ -37,12 +38,12 @@ export const ProjectDetailNew = (props: ProjectDetailNewProps) => {
     setIsStageIncomeDialogOpen,
     selectedStageForTransaction,
     setSelectedStageForTransaction,
-    setActiveSection, 
+    setActiveSection,
     handleAddStage,
     handleAddStageExpense,
     handleAddStageIncome
   } = props;
-  
+
   const [expandedStage, setExpandedStage] = useState<number | null>(null);
   const project = projects.find(p => p.id === viewingProject);
   if (!project) return null;
@@ -131,7 +132,7 @@ export const ProjectDetailNew = (props: ProjectDetailNewProps) => {
                 </div>
                 <div>
                   <Label htmlFor="budget">Бюджет этапа (₽)</Label>
-                  <Input id="budget" name="budget" type="number" step="0.01" placeholder="500000.00" />
+                  <MoneyInput id="budget" name="budget" placeholder="500 000" />
                 </div>
                 <Button type="submit" className="w-full">Добавить этап</Button>
               </form>
@@ -188,7 +189,7 @@ export const ProjectDetailNew = (props: ProjectDetailNewProps) => {
                     </div>
                   </div>
                 </CardHeader>
-                
+
                 {expandedStage === stage.id && (
                   <CardContent className="space-y-4 border-t pt-4">
                     <div className="grid grid-cols-3 gap-4 text-sm">
@@ -215,8 +216,8 @@ export const ProjectDetailNew = (props: ProjectDetailNewProps) => {
                     <Separator />
 
                     <div className="flex gap-2">
-                      <Button 
-                        size="sm" 
+                      <Button
+                        size="sm"
                         variant="outline"
                         className="flex-1"
                         onClick={() => {
@@ -227,8 +228,8 @@ export const ProjectDetailNew = (props: ProjectDetailNewProps) => {
                         <Icon name="Minus" size={16} className="mr-2" />
                         Добавить расход
                       </Button>
-                      <Button 
-                        size="sm" 
+                      <Button
+                        size="sm"
                         variant="outline"
                         className="flex-1"
                         onClick={() => {
@@ -258,8 +259,8 @@ export const ProjectDetailNew = (props: ProjectDetailNewProps) => {
                                   {expense.amount.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽
                                 </span>
                                 {expense.receipt && (
-                                  <Button 
-                                    size="sm" 
+                                  <Button
+                                    size="sm"
                                     variant="ghost"
                                     onClick={() => window.open(expense.receipt, '_blank')}
                                   >
@@ -288,8 +289,8 @@ export const ProjectDetailNew = (props: ProjectDetailNewProps) => {
                                   +{income.amount.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽
                                 </span>
                                 {income.receipt && (
-                                  <Button 
-                                    size="sm" 
+                                  <Button
+                                    size="sm"
                                     variant="ghost"
                                     onClick={() => window.open(income.receipt, '_blank')}
                                   >
@@ -326,7 +327,7 @@ export const ProjectDetailNew = (props: ProjectDetailNewProps) => {
             </div>
             <div>
               <Label htmlFor="expenseAmount">Сумма (₽)</Label>
-              <Input id="expenseAmount" name="amount" type="number" step="0.01" placeholder="50000.00" required />
+              <MoneyInput id="expenseAmount" name="amount" placeholder="50 000" required />
             </div>
             <div>
               <Label htmlFor="expenseDescription">Описание</Label>
@@ -349,7 +350,7 @@ export const ProjectDetailNew = (props: ProjectDetailNewProps) => {
           <form onSubmit={handleAddStageIncome} className="space-y-4">
             <div>
               <Label htmlFor="incomeAmount">Сумма (₽)</Label>
-              <Input id="incomeAmount" name="amount" type="number" step="0.01" placeholder="100000.00" required />
+              <MoneyInput id="incomeAmount" name="amount" placeholder="100 000" required />
             </div>
             <div>
               <Label htmlFor="incomeDescription">Описание</Label>

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { MoneyInput } from '@/components/ui/MoneyInput';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
@@ -161,8 +162,8 @@ export const ProjectDetail = (props: ProjectDetailProps) => {
                 <div>
                   <div className="flex items-center justify-between mb-3">
                     <h4 className="font-medium">Расходы</h4>
-                    <Button 
-                      size="sm" 
+                    <Button
+                      size="sm"
                       variant="outline"
                       onClick={() => {
                         setSelectedStage(stage.id);
@@ -188,8 +189,8 @@ export const ProjectDetail = (props: ProjectDetailProps) => {
                           <div className="flex items-center gap-3">
                             <span className="font-semibold">{expense.amount.toLocaleString()} ₽</span>
                             {expense.receipt && (
-                              <Button 
-                                size="sm" 
+                              <Button
+                                size="sm"
                                 variant="ghost"
                                 onClick={() => window.open(expense.receipt!, '_blank')}
                               >
@@ -220,7 +221,7 @@ export const ProjectDetail = (props: ProjectDetailProps) => {
             </div>
             <div>
               <Label htmlFor="amount">Сумма (₽)</Label>
-              <Input id="amount" name="amount" type="number" placeholder="50000" required />
+              <MoneyInput id="amount" name="amount" placeholder="50 000" required />
             </div>
             <div>
               <Label htmlFor="type">Тип расхода</Label>

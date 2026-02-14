@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { MoneyInput } from '@/components/ui/MoneyInput';
 import { Label } from '@/components/ui/label';
 
 interface ExpenseCategoryDetailProps {
@@ -89,8 +90,8 @@ export const ExpenseCategoryDetail = (props: ExpenseCategoryDetailProps) => {
                   <div className="flex items-center gap-3">
                     <span className="text-lg font-semibold">{payment.amount.toLocaleString()} ₽</span>
                     {payment.receipt && (
-                      <Button 
-                        size="sm" 
+                      <Button
+                        size="sm"
                         variant="ghost"
                         onClick={() => window.open(payment.receipt, '_blank')}
                       >
@@ -113,21 +114,20 @@ export const ExpenseCategoryDetail = (props: ExpenseCategoryDetailProps) => {
           <form onSubmit={handleAddPayment} className="space-y-4">
             <div>
               <Label htmlFor="paymentAmount">Сумма (₽)</Label>
-              <Input 
-                id="paymentAmount" 
-                name="amount" 
-                type="number" 
-                placeholder={category.amount > 0 ? category.amount.toString() : "50000"}
-                defaultValue={category.amount > 0 ? category.amount : undefined}
-                required 
+              <MoneyInput
+                id="paymentAmount"
+                name="amount"
+                placeholder={category.amount > 0 ? category.amount.toLocaleString() : "50 000"}
+                value={category.amount > 0 ? category.amount : undefined}
+                required
               />
             </div>
             <div>
               <Label htmlFor="paymentDate">Дата платежа</Label>
-              <Input 
-                id="paymentDate" 
-                name="date" 
-                type="date" 
+              <Input
+                id="paymentDate"
+                name="date"
+                type="date"
                 defaultValue={new Date().toISOString().split('T')[0]}
               />
             </div>

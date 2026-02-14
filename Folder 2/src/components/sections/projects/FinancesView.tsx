@@ -3,6 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { MoneyInput } from '@/components/ui/MoneyInput';
 import { Label } from '@/components/ui/label';
 import { ExpenseCategoryDetail } from './ExpenseCategoryDetail';
 import { ProjectStageExpenses } from './finances/ProjectStageExpenses';
@@ -37,12 +38,12 @@ export const FinancesView = (props: FinancesViewProps) => {
   const { projects, companyExpenses, expenseCategories, selectedProject, viewingCategory, setSelectedProject, setViewingCategory, isStageDialogOpen, setIsStageDialogOpen, isCompanyExpenseDialogOpen, setIsCompanyExpenseDialogOpen, isExpenseCategoryDialogOpen, setIsExpenseCategoryDialogOpen, isPaymentDialogOpen, setIsPaymentDialogOpen, handleAddStage, handleAddCompanyExpense, handleAddExpenseCategory, handleAddPayment } = props;
   const activeProjects = projects.filter(p => !p.archived);
   const project = activeProjects.find(p => p.id === selectedProject) || activeProjects[0];
-  
+
   const viewingCategoryData = expenseCategories.find(c => c.id === viewingCategory);
-  
+
   if (viewingCategoryData) {
     return (
-      <ExpenseCategoryDetail 
+      <ExpenseCategoryDetail
         category={viewingCategoryData}
         isPaymentDialogOpen={isPaymentDialogOpen}
         setIsPaymentDialogOpen={setIsPaymentDialogOpen}
@@ -51,7 +52,7 @@ export const FinancesView = (props: FinancesViewProps) => {
       />
     );
   }
-  
+
   if (!project) {
     return (
       <div className="space-y-6">
@@ -66,13 +67,13 @@ export const FinancesView = (props: FinancesViewProps) => {
       </div>
     );
   }
-  
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Финансы</h2>
         <div className="flex gap-2">
-          <select 
+          <select
             className="border rounded-lg px-4 py-2"
             value={selectedProject || project.id}
             onChange={(e) => setSelectedProject(Number(e.target.value))}
@@ -107,7 +108,7 @@ export const FinancesView = (props: FinancesViewProps) => {
                 </div>
                 <div>
                   <Label htmlFor="budget">Бюджет этапа (₽)</Label>
-                  <Input id="budget" name="budget" type="number" step="0.01" placeholder="500000.00" />
+                  <MoneyInput id="budget" name="budget" placeholder="500 000" />
                 </div>
                 <Button type="submit" className="w-full">Добавить этап</Button>
               </form>
@@ -116,7 +117,7 @@ export const FinancesView = (props: FinancesViewProps) => {
         </div>
       </div>
 
-      <CompanyFinancesCard 
+      <CompanyFinancesCard
         companyExpenses={companyExpenses}
         expenseCategories={expenseCategories}
       />
@@ -126,14 +127,14 @@ export const FinancesView = (props: FinancesViewProps) => {
         <ExpenseDistribution project={project} />
       </div>
 
-      <CompanyExpensesCard 
+      <CompanyExpensesCard
         companyExpenses={companyExpenses}
         isCompanyExpenseDialogOpen={isCompanyExpenseDialogOpen}
         setIsCompanyExpenseDialogOpen={setIsCompanyExpenseDialogOpen}
         handleAddCompanyExpense={handleAddCompanyExpense}
       />
 
-      <ExpenseCategoriesCard 
+      <ExpenseCategoriesCard
         expenseCategories={expenseCategories}
         isExpenseCategoryDialogOpen={isExpenseCategoryDialogOpen}
         setIsExpenseCategoryDialogOpen={setIsExpenseCategoryDialogOpen}

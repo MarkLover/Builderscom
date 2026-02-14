@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { MoneyInput } from '@/components/ui/MoneyInput';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -381,7 +382,7 @@ const ProjectDetail = () => {
                                     </div>
                                     <div>
                                         <Label htmlFor="budget">Бюджет этапа (₽)</Label>
-                                        <Input id="budget" name="budget" type="number" step="0.01" placeholder="500000.00" />
+                                        <MoneyInput id="budget" name="budget" placeholder="500 000" />
                                     </div>
                                     <Button type="submit" className="w-full" disabled={createStageMutation.isPending}>
                                         {createStageMutation.isPending ? 'Добавление...' : 'Добавить этап'}
@@ -472,7 +473,7 @@ const ProjectDetail = () => {
                         </div>
                         <div>
                             <Label htmlFor="amount">Сумма (₽)</Label>
-                            <Input id="amount" name="amount" type="number" step="0.01" placeholder="10000.00" required />
+                            <MoneyInput id="amount" name="amount" placeholder="10 000" required />
                         </div>
                         <div>
                             <Label htmlFor="category">Категория</Label>
@@ -520,12 +521,10 @@ const ProjectDetail = () => {
                             </div>
                             <div>
                                 <Label htmlFor="edit-amount">Сумма (₽)</Label>
-                                <Input
+                                <MoneyInput
                                     id="edit-amount"
                                     name="amount"
-                                    type="number"
-                                    step="0.01"
-                                    defaultValue={editingTransaction.amount}
+                                    value={editingTransaction.amount}
                                     required
                                 />
                             </div>
