@@ -27,7 +27,13 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/landing" element={<Landing onGetStarted={() => window.location.href = '/auth'} />} />
+          <Route path="/landing" element={<Landing onGetStarted={() => {
+            if (localStorage.getItem('token')) {
+              window.location.href = '/';
+            } else {
+              window.location.href = '/auth';
+            }
+          }} />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/" element={<Layout />}>
             <Route index element={<Index />} />
