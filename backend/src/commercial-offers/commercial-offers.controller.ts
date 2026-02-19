@@ -3,6 +3,7 @@ import {
     Get,
     Post,
     Delete,
+    Patch,
     Body,
     Param,
     UseGuards,
@@ -13,6 +14,9 @@ import { CreateCommercialOfferDto } from './dto/create-commercial-offer.dto';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { CreateWorkDto } from './dto/create-work.dto';
 import { CreateMaterialDto } from './dto/create-material.dto';
+import { UpdateCommercialOfferDto } from './dto/update-commercial-offer.dto';
+import { UpdateWorkDto } from './dto/update-work.dto';
+import { UpdateMaterialDto } from './dto/update-material.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('commercial-offers')
@@ -38,8 +42,13 @@ export class CommercialOffersController {
     }
 
     @Delete(':id')
-    delete(@Request() req, @Param('id') id: string) {
+    async delete(@Param('id') id: string, @Request() req) {
         return this.service.delete(+id, req.user.userId);
+    }
+
+    @Patch(':id')
+    async update(@Param('id') id: string, @Body() dto: UpdateCommercialOfferDto, @Request() req) {
+        return this.service.update(+id, req.user.userId, dto);
     }
 
     // === ROOMS ===
@@ -70,8 +79,13 @@ export class CommercialOffersController {
     }
 
     @Delete('works/:workId')
-    deleteWork(@Request() req, @Param('workId') workId: string) {
+    async deleteWork(@Param('workId') workId: string, @Request() req) {
         return this.service.deleteWork(+workId, req.user.userId);
+    }
+
+    @Patch('works/:workId')
+    async updateWork(@Param('workId') workId: string, @Body() dto: UpdateWorkDto, @Request() req) {
+        return this.service.updateWork(+workId, req.user.userId, dto);
     }
 
     // === MATERIALS ===
@@ -86,7 +100,12 @@ export class CommercialOffersController {
     }
 
     @Delete('materials/:materialId')
-    deleteMaterial(@Request() req, @Param('materialId') materialId: string) {
+    async deleteMaterial(@Param('materialId') materialId: string, @Request() req) {
         return this.service.deleteMaterial(+materialId, req.user.userId);
+    }
+
+    @Patch('materials/:materialId')
+    async updateMaterial(@Param('materialId') materialId: string, @Body() dto: UpdateMaterialDto, @Request() req) {
+        return this.service.updateMaterial(+materialId, req.user.userId, dto);
     }
 }

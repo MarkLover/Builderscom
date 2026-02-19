@@ -4,6 +4,9 @@ import { CreateCommercialOfferDto } from './dto/create-commercial-offer.dto';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { CreateWorkDto } from './dto/create-work.dto';
 import { CreateMaterialDto } from './dto/create-material.dto';
+import { UpdateCommercialOfferDto } from './dto/update-commercial-offer.dto';
+import { UpdateWorkDto } from './dto/update-work.dto';
+import { UpdateMaterialDto } from './dto/update-material.dto';
 
 @Injectable()
 export class CommercialOffersService {
@@ -14,6 +17,8 @@ export class CommercialOffersService {
         return this.prisma.commercialOffer.create({
             data: {
                 address: dto.address,
+                customerName: dto.customerName,
+                customerPhone: dto.customerPhone,
                 userId,
             },
             include: {
@@ -75,6 +80,32 @@ export class CommercialOffersService {
         }
 
         return this.prisma.commercialOffer.delete({ where: { id } });
+    }
+
+    // Update a commercial offer
+    async update(id: number, userId: number, dto: UpdateCommercialOfferDto) {
+        const offer = await this.prisma.commercialOffer.findFirst({
+            where: { id, userId },
+        });
+
+        if (!offer) {
+            throw new NotFoundException('Commercial offer not found');
+        }
+
+        return this.prisma.commercialOffer.update({
+            where: { id },
+            data: {
+                ...dto,
+            },
+            include: {
+                rooms: {
+                    include: {
+                        works: true,
+                        materials: true,
+                    },
+                },
+            },
+        });
     }
 
     // Add a room to an offer
@@ -153,6 +184,23 @@ export class CommercialOffersService {
         return this.prisma.commercialOfferWork.delete({ where: { id: workId } });
     }
 
+    // Update work
+    async updateWork(workId: number, userId: number, dto: UpdateWorkDto) {
+        const work = await this.prisma.commercialOfferWork.findFirst({
+            where: { id: workId },
+            include: { room: { include: { offer: true } } },
+        });
+
+        if (!work || work.room.offer.userId !== userId) {
+            throw new NotFoundException('Work not found');
+        }
+
+        return this.prisma.commercialOfferWork.update({
+            where: { id: workId },
+            data: { ...dto },
+        });
+    }
+
     // Add a material to a room
     async addMaterial(roomId: number, userId: number, dto: CreateMaterialDto) {
         // Verify ownership through room -> offer -> user chain
@@ -188,5 +236,22 @@ export class CommercialOffersService {
         }
 
         return this.prisma.commercialOfferMaterial.delete({ where: { id: materialId } });
+    }
+
+    // Update material
+    async updateMaterial(materialId: number, userId: number, dto: UpdateMaterialDto) {
+        const material = await this.prisma.commercialOfferMaterial.findFirst({
+            where: { id: materialId },
+            include: { room: { include: { offer: true } } },
+        });
+
+        if (!material || material.room.offer.userId !== userId) {
+            throw new NotFoundException('Material not found');
+        }
+
+        return this.prisma.commercialOfferMaterial.update({
+            where: { id: materialId },
+            data: { ...dto },
+        });
     }
 }

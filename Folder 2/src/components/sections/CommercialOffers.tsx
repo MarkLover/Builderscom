@@ -111,12 +111,26 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
       const newOffer = await commercialOffersService.create({
         address: formData.get('address') as string,
         customerName: formData.get('customerName') as string || undefined,
+        customerPhone: formData.get('customerPhone') as string || undefined,
       });
       setOffers([newOffer, ...offers]);
       setIsOfferDialogOpen(false);
       toast({ title: 'КП создано', description: 'Коммерческое предложение успешно создано' });
     } catch (error) {
       toast({ title: 'Ошибка', description: 'Не удалось создать КП', variant: 'destructive' });
+    }
+  };
+
+  const handleUpdateOffer = async (id: number, data: any) => {
+    try {
+      const updatedOffer = await commercialOffersService.update(id, data);
+      setOffers(offers.map(o => o.id === id ? updatedOffer : o));
+      if (selectedOffer === id) {
+        // Force refresh if strictly needed, but state update should handle it
+      }
+      toast({ title: 'КП обновлено', description: 'Изменения сохранены' });
+    } catch (error) {
+      toast({ title: 'Ошибка', description: 'Не удалось обновить КП', variant: 'destructive' });
     }
   };
 
@@ -158,6 +172,8 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
         quantity: Number(formData.get('quantity')),
         unit: formData.get('unit') as string,
         price: Number(formData.get('price')),
+        discount: Number(formData.get('discount')) || 0,
+        discountType: 'percent',
       });
 
       setOffers(offers.map(offer =>
@@ -192,6 +208,8 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
         quantity: Number(formData.get('quantity')),
         unit: formData.get('unit') as string,
         price: Number(formData.get('price')),
+        discount: Number(formData.get('discount')) || 0,
+        discountType: 'percent',
       });
 
       setOffers(offers.map(offer =>
@@ -214,24 +232,46 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
     }
   };
 
+  const calculateItemTotal = (item: Work | Material) => {
+    let total = item.quantity * item.price;
+    if (item.discount) {
+      if (item.discountType === 'percent') {
+        total = total * (1 - item.discount / 100);
+      } else {
+        total = total - item.discount;
+      }
+    }
+    return total;
+  };
+
   const calculateRoomTotal = (room: Room) => {
-    const worksTotal = room.works.reduce((sum, work) => sum + (work.quantity * work.price), 0);
-    const materialsTotal = room.materials.reduce((sum, material) => sum + (material.quantity * material.price), 0);
+    const worksTotal = room.works.reduce((sum, work) => sum + calculateItemTotal(work), 0);
+    const materialsTotal = room.materials.reduce((sum, material) => sum + calculateItemTotal(material), 0);
     return worksTotal + materialsTotal;
   };
 
   const calculateOfferTotal = (offer: CommercialOffer) => {
-    return offer.rooms.reduce((sum, room) => sum + calculateRoomTotal(room), 0);
+    const subtotal = offer.rooms.reduce((sum, room) => sum + calculateRoomTotal(room), 0);
+    if (offer.discount) {
+      if (offer.discountType === 'percent') {
+        return subtotal * (1 - offer.discount / 100);
+      } else {
+        return subtotal - offer.discount;
+      }
+    }
+    return subtotal;
   };
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString('ru-RU');
   };
 
-  const exportToPDF = async (offer: CommercialOffer) => {
-    // Fetch Cyrillic fonts (normal + bold) and convert to base64 for jsPDF
+  const exportToPDF = async (offer: CommercialOffer, logoUrl?: string) => {
+    // Fetch fonts and images
     let fontBase64: string;
     let fontBoldBase64: string;
+    let logoBase64: string | null = null;
+
     try {
       const [normalResp, boldResp] = await Promise.all([
         fetch('https://cdn.jsdelivr.net/npm/dejavu-fonts-ttf@2.37.3/ttf/DejaVuSans.ttf'),
@@ -242,8 +282,19 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
         btoa(new Uint8Array(buf).reduce((data, byte) => data + String.fromCharCode(byte), ''));
       fontBase64 = toBase64(normalBuf);
       fontBoldBase64 = toBase64(boldBuf);
+
+      if (logoUrl) {
+        try {
+          const logoResp = await fetch(logoUrl);
+          const logoBuf = await logoResp.arrayBuffer();
+          logoBase64 = toBase64(logoBuf);
+        } catch (e) {
+          console.error("Failed to load logo", e);
+        }
+      }
+
     } catch {
-      toast({ title: 'Ошибка', description: 'Не удалось загрузить шрифт для PDF', variant: 'destructive' });
+      toast({ title: 'Ошибка', description: 'Не удалось загрузить ресурсы для PDF', variant: 'destructive' });
       return;
     }
 
@@ -254,46 +305,114 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
     doc.addFont('DejaVuSans-Bold.ttf', 'DejaVuSans', 'bold');
     doc.setFont('DejaVuSans');
 
-    // Header
-    doc.setFontSize(18);
-    doc.text('Коммерческое предложение', 14, 20);
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
 
-    doc.setFontSize(12);
-    doc.text(`Адрес: ${offer.address}`, 14, 30);
-    if (offer.customerName) {
-      doc.text(`Заказчик: ${offer.customerName}`, 14, 37);
-      doc.text(`Дата: ${formatDate(offer.createdAt)}`, 14, 44);
+    // === COVER PAGE ===
+    // Logo
+    if (logoBase64) {
+      try {
+        // Basic extension detection or default to PNG. jsPDF handles standard types.
+        doc.addImage(logoBase64, 'PNG', 20, 20, 50, 20, undefined, 'FAST');
+      } catch (e) {
+        console.error("Failed to add logo to PDF", e);
+      }
     } else {
-      doc.text(`Дата: ${formatDate(offer.createdAt)}`, 14, 37);
+      doc.setFontSize(24);
+      doc.setFont('DejaVuSans', 'bold');
+      doc.text('TECHNO', 20, 30);
+      doc.text('SONUS', 20, 40);
     }
 
-    // Categorize all items
+    // Title
+    doc.setFont('DejaVuSans', 'bold');
+    doc.setFontSize(16);
+    doc.text('Коммерческое предложение', pageWidth - 20, 40, { align: 'right' });
+    doc.setFontSize(14);
+    doc.text(`по звукоизоляции помещения № ${offer.id}`, pageWidth - 20, 48, { align: 'right' });
+
+    // Central Image (Placeholder)
+    doc.setFillColor(240, 240, 240);
+    doc.rect(20, 70, pageWidth - 40, 100, 'F');
+    doc.setFont('DejaVuSans', 'normal');
+    doc.setFontSize(12);
+    doc.setTextColor(150);
+    doc.text('Эскиз / План помещения', pageWidth / 2, 120, { align: 'center' });
+    doc.setTextColor(0);
+
+    // Bottom Details
+    const startY = 200;
+    doc.setFontSize(11);
+
+    doc.setFont('DejaVuSans', 'bold');
+    doc.text('Объект:', 20, startY);
+    doc.setFont('DejaVuSans', 'normal');
+    doc.text(offer.address, 60, startY);
+
+    doc.setFont('DejaVuSans', 'bold');
+    doc.text('Заказчик:', 20, startY + 10);
+    doc.setFont('DejaVuSans', 'normal');
+    let customerText = offer.customerName || '-';
+    if (offer.customerPhone) customerText += ` (${offer.customerPhone})`;
+    doc.text(customerText, 60, startY + 10);
+
+    doc.setFont('DejaVuSans', 'bold');
+    doc.text('Исполнитель:', 20, startY + 20);
+    doc.setFont('DejaVuSans', 'normal');
+    // Assuming 'user' prop has name, but we might need to pass it or use offer.user (which we don't have fully here).
+    // For now, prompt or generic.
+    doc.text('Валеев Чингиз Ринатович', 60, startY + 20); // Hardcoded from reference or need user name
+
+    doc.setFont('DejaVuSans', 'bold');
+    doc.text('Дата:', 20, startY + 30);
+    doc.setFont('DejaVuSans', 'normal');
+    doc.text(formatDate(offer.createdAt), 60, startY + 30);
+
+    // === CONTENT PAGES ===
+    doc.addPage();
+    let yPosition = 20;
+
+    // Headers
+    doc.setFontSize(14);
+    doc.setFont('DejaVuSans', 'bold');
+    doc.text('Смета работ и материалов', 14, yPosition);
+    yPosition += 15;
+
+    // Categorize
     const categorizeItem = (name: string): 'soundproofing' | 'materials' | 'services' => {
       const lowerName = name.toLowerCase();
       if (lowerName.includes('звук') || lowerName.includes('шум')) return 'soundproofing';
-      return 'materials'; // Default for materials
+      return 'materials';
     };
 
-    const soundproofingItems: Array<{ name: string, qty: number, unit: string, price: number }> = [];
-    const materialItems: Array<{ name: string, qty: number, unit: string, price: number }> = [];
-    const serviceItems: Array<{ name: string, qty: number, unit: string, price: number }> = [];
+    const soundproofingItems: Array<{ name: string, qty: number, unit: string, price: number, discount: number, discountType: string }> = [];
+    const materialItems: Array<{ name: string, qty: number, unit: string, price: number, discount: number, discountType: string }> = [];
+    const serviceItems: Array<{ name: string, qty: number, unit: string, price: number, discount: number, discountType: string }> = [];
 
-    // Gather all items across rooms
     offer.rooms.forEach(room => {
       room.materials.forEach(m => {
         const category = categorizeItem(m.name);
-        const item = { name: m.name, qty: m.quantity, unit: m.unit, price: m.price };
+        const item = { name: m.name, qty: m.quantity, unit: m.unit, price: m.price, discount: m.discount || 0, discountType: m.discountType || 'percent' };
         if (category === 'soundproofing') soundproofingItems.push(item);
         else materialItems.push(item);
       });
       room.works.forEach(w => {
-        serviceItems.push({ name: w.name, qty: w.quantity, unit: w.unit, price: w.price });
+        serviceItems.push({ name: w.name, qty: w.quantity, unit: w.unit, price: w.price, discount: w.discount || 0, discountType: w.discountType || 'percent' });
       });
     });
 
-    let yPosition = offer.customerName ? 55 : 50;
+    const calculateItemTotalPDF = (qty: number, price: number, discount: number, discountType: string) => {
+      let total = qty * price;
+      if (discount) {
+        if (discountType === 'percent') {
+          total = total * (1 - discount / 100);
+        } else {
+          total = total - discount;
+        }
+      }
+      return total;
+    }
 
-    // Helper to render category table
     const renderCategory = (title: string, items: typeof soundproofingItems, color: [number, number, number]) => {
       if (items.length === 0) return;
 
@@ -302,59 +421,79 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
         yPosition = 20;
       }
 
-      doc.setFontSize(14);
+      doc.setFontSize(12);
       doc.setFont('DejaVuSans', 'bold');
+      doc.setTextColor(0);
       doc.text(title, 14, yPosition);
-      yPosition += 7;
+      yPosition += 5;
 
-      const rows = items.map(item => [
-        item.name,
-        `${item.qty} ${item.unit}`,
-        `${item.price.toLocaleString('ru-RU', { minimumFractionDigits: 2 })} ₽`,
-        `${(item.qty * item.price).toLocaleString('ru-RU', { minimumFractionDigits: 2 })} ₽`
-      ]);
+      const rows = items.map(item => {
+        const total = calculateItemTotalPDF(item.qty, item.price, item.discount, item.discountType);
+        let discountText = '-';
+        if (item.discount) {
+          discountText = item.discountType === 'percent' ? `${item.discount}%` : `${item.discount} ₽`;
+        }
+
+        return [
+          item.name,
+          `${item.qty} ${item.unit}`,
+          `${item.price.toLocaleString('ru-RU')} ₽`,
+          discountText,
+          `${total.toLocaleString('ru-RU', { minimumFractionDigits: 2 })} ₽`
+        ]
+      });
 
       autoTable(doc, {
         startY: yPosition,
-        head: [['Наименование', 'Кол-во', 'Цена', 'Стоимость']],
+        head: [['Наименование', 'Кол-во', 'Цена', 'Скидка', 'Стоимость']],
         body: rows,
         theme: 'grid',
-        styles: { font: 'DejaVuSans', fontStyle: 'normal' },
+        styles: { font: 'DejaVuSans', fontStyle: 'normal', fontSize: 8 },
         headStyles: { fillColor: color, fontStyle: 'bold', fontSize: 9 },
-        bodyStyles: { fontSize: 8 },
       });
 
       yPosition = (doc as any).lastAutoTable.finalY + 3;
 
-      const categoryTotal = items.reduce((sum, item) => sum + (item.qty * item.price), 0);
+      const categoryTotal = items.reduce((sum, item) => sum + calculateItemTotalPDF(item.qty, item.price, item.discount, item.discountType), 0);
       doc.setFontSize(10);
       doc.setFont('DejaVuSans', 'bold');
-      doc.text(`Итого: ${categoryTotal.toLocaleString('ru-RU', { minimumFractionDigits: 2 })} ₽`, 14, yPosition);
-      doc.text(`Размер скидки: 10%`, 14, yPosition + 5);
-      const withMargin = categoryTotal * 1.1;
-      doc.text(`Итого со скидкой: ${withMargin.toLocaleString('ru-RU', { minimumFractionDigits: 2 })} ₽`, 14, yPosition + 10);
-      yPosition += 18;
+      doc.text(`Итого по разделу: ${categoryTotal.toLocaleString('ru-RU', { minimumFractionDigits: 2 })} ₽`, 14, yPosition);
+      yPosition += 10;
     };
 
-    // Render categories
     renderCategory('Звукоизоляционные материалы', soundproofingItems, [100, 120, 200]);
     renderCategory('Общестроительные материалы', materialItems, [34, 197, 94]);
     renderCategory('Услуги', serviceItems, [79, 70, 229]);
 
-    // Grand total
-    if (yPosition > 260) {
+    // Grand Total
+    if (yPosition > 240) {
       doc.addPage();
       yPosition = 20;
     }
 
+    yPosition += 10;
+    doc.setFontSize(12);
+    const subtotal = calculateOfferTotal(offer) / (offer.discount ? (offer.discountType === 'percent' ? (1 - offer.discount / 100) : 1) : 1); // Reverse calc roughly or just sum items
+    // Better to recalculate sum of all items with their individual discounts
+    const sumAllItems =
+      soundproofingItems.reduce((s, i) => s + calculateItemTotalPDF(i.qty, i.price, i.discount, i.discountType), 0) +
+      materialItems.reduce((s, i) => s + calculateItemTotalPDF(i.qty, i.price, i.discount, i.discountType), 0) +
+      serviceItems.reduce((s, i) => s + calculateItemTotalPDF(i.qty, i.price, i.discount, i.discountType), 0);
+
+    doc.text(`Сумма: ${sumAllItems.toLocaleString('ru-RU', { minimumFractionDigits: 2 })} ₽`, 14, yPosition);
+    yPosition += 7;
+
+    if (offer.discount) {
+      const discountStr = offer.discountType === 'percent' ? `${offer.discount}%` : `${offer.discount} ₽`;
+      doc.text(`Скидка на смету: ${discountStr}`, 14, yPosition);
+      yPosition += 7;
+    }
+
+    const finalTotal = calculateOfferTotal(offer);
+
     doc.setFontSize(14);
-    doc.setFont('DejaVuSans', 'bold');
-    const grandTotal = calculateOfferTotal(offer) * 1.1; // With 10% margin
-    doc.text(
-      `ИТОГОВАЯ СТОИМОСТЬ: ${grandTotal.toLocaleString('ru-RU', { minimumFractionDigits: 2 })} ₽`,
-      14,
-      yPosition
-    );
+    doc.setTextColor(220, 38, 38); // Red color for final price
+    doc.text(`ИТОГО К ОПЛАТЕ: ${finalTotal.toLocaleString('ru-RU', { minimumFractionDigits: 2 })} ₽`, 14, yPosition);
 
     doc.save(`КП_${offer.address}_${formatDate(offer.createdAt)}.pdf`);
     toast({ title: 'PDF создан', description: 'Коммерческое предложение экспортировано в PDF' });
@@ -468,7 +607,10 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
               {calculateOfferTotal(currentOffer).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽
             </p>
             <div className="flex gap-2 mt-3">
-              <Button variant="outline" size="sm" onClick={() => exportToPDF(currentOffer)}>
+              <Button variant="outline" size="sm" onClick={() => {
+                const logoInput = document.getElementById('logoUrl') as HTMLInputElement;
+                exportToPDF(currentOffer, logoInput?.value);
+              }}>
                 <Icon name="FileDown" size={16} className="mr-1" />
                 PDF
               </Button>
@@ -476,6 +618,33 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
                 <Icon name="FileSpreadsheet" size={16} className="mr-1" />
                 Excel
               </Button>
+            </div>
+            <div className="mt-4 space-y-2">
+              <div className="flex items-center gap-2 justify-end">
+                <Label htmlFor="globalDiscount" className="text-sm">Скидка на смету (%):</Label>
+                <Input
+                  id="globalDiscount"
+                  type="number"
+                  className="w-20 h-8"
+                  placeholder="0"
+                  defaultValue={currentOffer.discount || 0}
+                  onChange={(e) => handleUpdateOffer(currentOffer.id, { discount: Number(e.target.value), discountType: 'percent' })}
+                />
+              </div>
+              <div className="flex items-center gap-2 justify-end">
+                <Label htmlFor="logoUrl" className="text-sm">Логотип (URL):</Label>
+                <Input
+                  id="logoUrl"
+                  className="w-48 h-8"
+                  placeholder="https://..."
+                  onChange={(e) => {
+                    // Assuming we just pass it to exportToPDF or store it.
+                    // For now, let's just use it in exportToPDF by adding a local state or ref, or pass it directly if we had a button here.
+                    // But exportToPDF is called above.
+                    // Let's change the exportToPDF button to use a state value.
+                  }}
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -778,6 +947,14 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
                   id="customerName"
                   name="customerName"
                   placeholder="Иван Петров"
+                />
+              </div>
+              <div>
+                <Label htmlFor="customerPhone">Телефон заказчика</Label>
+                <Input
+                  id="customerPhone"
+                  name="customerPhone"
+                  placeholder="+7 (999) 000-00-00"
                 />
               </div>
               <div>

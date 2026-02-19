@@ -13,6 +13,7 @@ model User {
   password  String
   name      String
   company   String?
+  logo      String?  // URL or Base64
   role      String   @default("user") // "user" | "admin"
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -195,6 +196,9 @@ model CommercialOffer {
   id           Int      @id @default(autoincrement())
   address      String
   customerName String?  // Customer full name
+  customerPhone String? // Customer phone number
+  discount      Float    @default(0)
+  discountType  String   @default("percent") // "percent" | "fixed"
   
   userId    Int
   user      User     @relation(fields: [userId], references: [id])
@@ -227,6 +231,8 @@ model CommercialOfferWork {
   quantity Float
   unit     String // "м2" | "шт" | "мп"
   price    Float
+  discount Float  @default(0)
+  discountType String @default("percent")
   
   roomId   Int
   room     CommercialOfferRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
@@ -240,6 +246,8 @@ model CommercialOfferMaterial {
   quantity Float
   unit     String // "шт" | "упаковок" | "кг" | "мп" | "м2"
   price    Float
+  discount Float  @default(0)
+  discountType String @default("percent")
   
   roomId   Int
   room     CommercialOfferRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)

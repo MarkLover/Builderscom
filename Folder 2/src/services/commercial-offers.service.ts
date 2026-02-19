@@ -4,6 +4,9 @@ export interface CommercialOffer {
     id: number;
     address: string;
     customerName?: string;
+    customerPhone?: string;
+    discount?: number;
+    discountType?: string;
     createdAt: string;
     updatedAt: string;
     rooms: Room[];
@@ -24,6 +27,8 @@ export interface Work {
     quantity: number;
     unit: string;
     price: number;
+    discount?: number;
+    discountType?: string;
 }
 
 export interface Material {
@@ -32,11 +37,14 @@ export interface Material {
     quantity: number;
     unit: string;
     price: number;
+    discount?: number;
+    discountType?: string;
 }
 
 export interface CreateOfferDto {
     address: string;
     customerName?: string;
+    customerPhone?: string;
 }
 
 export interface CreateRoomDto {
@@ -50,6 +58,8 @@ export interface CreateWorkDto {
     quantity: number;
     unit: string;
     price: number;
+    discount?: number;
+    discountType?: string;
 }
 
 export interface CreateMaterialDto {
@@ -57,6 +67,8 @@ export interface CreateMaterialDto {
     quantity: number;
     unit: string;
     price: number;
+    discount?: number;
+    discountType?: string;
 }
 
 export const commercialOffersService = {
@@ -73,6 +85,11 @@ export const commercialOffersService = {
 
     create: async (data: CreateOfferDto): Promise<CommercialOffer> => {
         const response = await api.post('/commercial-offers', data);
+        return response.data;
+    },
+
+    update: async (id: number, data: Partial<CreateOfferDto> & { discount?: number, discountType?: string }): Promise<CommercialOffer> => {
+        const response = await api.patch(`/commercial-offers/${id}`, data);
         return response.data;
     },
 
@@ -100,6 +117,11 @@ export const commercialOffersService = {
         await api.delete(`/commercial-offers/works/${workId}`);
     },
 
+    updateWork: async (workId: number, data: Partial<CreateWorkDto> & { discount?: number, discountType?: string }): Promise<Work> => {
+        const response = await api.patch(`/commercial-offers/works/${workId}`, data);
+        return response.data;
+    },
+
     // Materials
     addMaterial: async (roomId: number, data: CreateMaterialDto): Promise<Material> => {
         const response = await api.post(`/commercial-offers/rooms/${roomId}/materials`, data);
@@ -108,5 +130,10 @@ export const commercialOffersService = {
 
     deleteMaterial: async (materialId: number): Promise<void> => {
         await api.delete(`/commercial-offers/materials/${materialId}`);
+    },
+
+    updateMaterial: async (materialId: number, data: Partial<CreateMaterialDto> & { discount?: number, discountType?: string }): Promise<Material> => {
+        const response = await api.patch(`/commercial-offers/materials/${materialId}`, data);
+        return response.data;
     },
 };

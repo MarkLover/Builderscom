@@ -172,7 +172,7 @@ sudo certbot --nginx -d xn--80ardojfh.website -d www.xn--80ardojfh.website
 
 ---
 
-## 9. Обновление в будущем
+## 9. Обновление в будущемяЁЙЙЙЙЙЯ
 
 ```bash
 cd /var/www/builders
