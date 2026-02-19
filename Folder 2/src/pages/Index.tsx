@@ -139,9 +139,14 @@ const Index = () => {
   const isEmpty = projects.length === 0;
 
   if (!user && !isLoading) {
-    // If no user, redirect to landing
-    setTimeout(() => navigate('/landing'), 0);
-    return null;
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-4">Вы не авторизованы</h2>
+          <Button onClick={() => navigate('/auth')}>Войти</Button>
+        </div>
+      </div>
+    );
   }
 
   if (isLoading) {
