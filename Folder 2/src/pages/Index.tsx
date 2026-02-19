@@ -138,7 +138,13 @@ const Index = () => {
   const recentExpenses = getAllExpenses().slice(0, 5);
   const isEmpty = projects.length === 0;
 
-  if (!user || isLoading) {
+  if (!user && !isLoading) {
+    // If no user, redirect to landing
+    setTimeout(() => navigate('/landing'), 0);
+    return null;
+  }
+
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
         <p className="text-muted-foreground">Загрузка данных...</p>

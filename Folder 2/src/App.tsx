@@ -18,6 +18,8 @@ import { Layout } from "@/components/layout/Layout";
 
 const queryClient = new QueryClient();
 
+import Landing from "./pages/Landing";
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -25,6 +27,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
+          <Route path="/landing" element={<Landing onGetStarted={() => window.location.href = '/auth'} />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/" element={<Layout />}>
             <Route index element={<Index />} />

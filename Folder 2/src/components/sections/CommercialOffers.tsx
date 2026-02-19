@@ -378,816 +378,819 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
       } catch (e) {
         console.error("Failed to add logo to PDF", e);
       }
-    } else {
-      doc.setFontSize(24);
-      doc.setFont('DejaVuSans', 'bold');
-      doc.text('TECHNO', 20, 30);
-      doc.text('SONUS', 20, 40);
     }
+  } else {
+    // Fallback if no logo
+    doc.setFontSize(22);
+  doc.setFont('DejaVuSans', 'bold');
+  const companyName = user.company || user.name || 'Компания';
+  // Split into lines if too long or just print
+  doc.text(companyName, 20, 30);
+}
 
-    // Title
-    doc.setFont('DejaVuSans', 'bold');
-    doc.setFontSize(16);
-    doc.text('Коммерческое предложение', pageWidth - 20, 40, { align: 'right' });
-    doc.setFontSize(14);
-    doc.text(`по звукоизоляции помещения № ${offer.id}`, pageWidth - 20, 48, { align: 'right' });
+// Title
+doc.setFont('DejaVuSans', 'bold');
+doc.setFontSize(16);
+doc.text('Коммерческое предложение', pageWidth - 20, 40, { align: 'right' });
+doc.setFontSize(14);
+doc.text(`по звукоизоляции помещения № ${offer.id}`, pageWidth - 20, 48, { align: 'right' });
 
-    // Central Image (Plan)
-    if (offer.planImage) {
-      try {
-        const planResp = await fetch(offer.planImage);
-        const planBuf = await planResp.arrayBuffer();
-        const planBase64 = btoa(new Uint8Array(planBuf).reduce((data, byte) => data + String.fromCharCode(byte), ''));
-        const ext = offer.planImage.split('.').pop()?.toUpperCase();
-        // Simple mapping for common extensions, or let jsPDF guess if passed undefined/null? NO, explicit is safer.
-        // But 'JPG' -> 'JPEG' mapping might be needed.
-        let format = 'JPEG';
-        if (ext === 'PNG') format = 'PNG';
-        if (ext === 'WEBP') format = 'WEBP'; // jsPDF might not support WEBP in all versions, but let's try.
+// Central Image (Plan)
+if (offer.planImage) {
+  try {
+    const planResp = await fetch(offer.planImage);
+    const planBuf = await planResp.arrayBuffer();
+    const planBase64 = btoa(new Uint8Array(planBuf).reduce((data, byte) => data + String.fromCharCode(byte), ''));
+    const ext = offer.planImage.split('.').pop()?.toUpperCase();
+    // Simple mapping for common extensions, or let jsPDF guess if passed undefined/null? NO, explicit is safer.
+    // But 'JPG' -> 'JPEG' mapping might be needed.
+    let format = 'JPEG';
+    if (ext === 'PNG') format = 'PNG';
+    if (ext === 'WEBP') format = 'WEBP'; // jsPDF might not support WEBP in all versions, but let's try.
 
-        doc.addImage(planBase64, format as any, 20, 70, pageWidth - 40, 100);
-      } catch (e) {
-        console.error("Failed to load plan image", e);
-        doc.setFillColor(240, 240, 240);
-        doc.rect(20, 70, pageWidth - 40, 100, 'F');
-        doc.setFont('DejaVuSans', 'normal');
-        doc.setFontSize(12);
-        doc.setTextColor(150);
-        doc.text('Эскиз / План помещения (Ошибка загрузки)', pageWidth / 2, 120, { align: 'center' });
-        doc.setTextColor(0);
-      }
-    } else {
-      doc.setFillColor(240, 240, 240);
-      doc.rect(20, 70, pageWidth - 40, 100, 'F');
-      doc.setFont('DejaVuSans', 'normal');
-      doc.setFontSize(12);
-      doc.setTextColor(150);
-      doc.text('Эскиз / План помещения', pageWidth / 2, 120, { align: 'center' });
-      doc.setTextColor(0);
-    }
-
-    // Bottom Details
-    const startY = 200;
-    doc.setFontSize(11);
-
-    doc.setFont('DejaVuSans', 'bold');
-    doc.text('Объект:', 20, startY);
+    doc.addImage(planBase64, format as any, 20, 70, pageWidth - 40, 100);
+  } catch (e) {
+    console.error("Failed to load plan image", e);
+    doc.setFillColor(240, 240, 240);
+    doc.rect(20, 70, pageWidth - 40, 100, 'F');
     doc.setFont('DejaVuSans', 'normal');
-    doc.text(offer.address, 60, startY);
-
-    doc.setFont('DejaVuSans', 'bold');
-    doc.text('Заказчик:', 20, startY + 10);
-    doc.setFont('DejaVuSans', 'normal');
-    let customerText = offer.customerName || '-';
-    if (offer.customerPhone) customerText += ` (${offer.customerPhone})`;
-    doc.text(customerText, 60, startY + 10);
-
-    doc.setFont('DejaVuSans', 'bold');
-    doc.text('Исполнитель:', 20, startY + 20);
-    doc.setFont('DejaVuSans', 'normal');
-
-    let executorName = 'Валеев Чингиз Ринатович';
-    if (offer.executor && offer.executor.name) {
-      executorName = offer.executor.name;
-    } else if (offer.executorId) {
-      const emp = employees.find(e => e.id === offer.executorId);
-      if (emp) executorName = emp.name;
-    }
-    doc.text(executorName, 60, startY + 20);
-
-    doc.setFont('DejaVuSans', 'bold');
-    doc.text('Дата:', 20, startY + 30);
-    doc.setFont('DejaVuSans', 'normal');
-    doc.text(formatDate(offer.createdAt), 60, startY + 30);
-
-    // === CONTENT PAGES ===
-    doc.addPage();
-    let yPosition = 20;
-
-    // Headers
-    doc.setFontSize(14);
-    doc.setFont('DejaVuSans', 'bold');
-    doc.text('Смета работ и материалов', 14, yPosition);
-    yPosition += 15;
-
-    // Categorize
-    const categorizeItem = (name: string): 'soundproofing' | 'materials' | 'services' => {
-      const lowerName = name.toLowerCase();
-      if (lowerName.includes('звук') || lowerName.includes('шум')) return 'soundproofing';
-      return 'materials';
-    };
-
-    const soundproofingItems: Array<{ name: string, qty: number, unit: string, price: number, discount: number, discountType: string }> = [];
-    const materialItems: Array<{ name: string, qty: number, unit: string, price: number, discount: number, discountType: string }> = [];
-    const serviceItems: Array<{ name: string, qty: number, unit: string, price: number, discount: number, discountType: string }> = [];
-
-    offer.rooms.forEach(room => {
-      room.materials.forEach(m => {
-        const category = categorizeItem(m.name);
-        const item = { name: m.name, qty: m.quantity, unit: m.unit, price: m.price, discount: m.discount || 0, discountType: m.discountType || 'percent' };
-        if (category === 'soundproofing') soundproofingItems.push(item);
-        else materialItems.push(item);
-      });
-      room.works.forEach(w => {
-        serviceItems.push({ name: w.name, qty: w.quantity, unit: w.unit, price: w.price, discount: w.discount || 0, discountType: w.discountType || 'percent' });
-      });
-    });
-
-    const calculateItemTotalPDF = (qty: number, price: number, discount: number, discountType: string) => {
-      let total = qty * price;
-      if (discount) {
-        if (discountType === 'percent') {
-          total = total * (1 - discount / 100);
-        } else {
-          total = total - discount;
-        }
-      }
-      return total;
-    }
-
-    const renderCategory = (title: string, items: typeof soundproofingItems, color: [number, number, number]) => {
-      if (items.length === 0) return;
-
-      if (yPosition > 250) {
-        doc.addPage();
-        yPosition = 20;
-      }
-
-      doc.setFontSize(12);
-      doc.setFont('DejaVuSans', 'bold');
-      doc.setTextColor(0);
-      doc.text(title, 14, yPosition);
-      yPosition += 5;
-
-      const rows = items.map(item => {
-        const total = calculateItemTotalPDF(item.qty, item.price, item.discount, item.discountType);
-        let discountText = '-';
-        if (item.discount) {
-          discountText = item.discountType === 'percent' ? `${item.discount}%` : `${item.discount} ₽`;
-        }
-
-        return [
-          item.name,
-          `${item.qty} ${item.unit}`,
-          `${item.price.toLocaleString('ru-RU')} ₽`,
-          discountText,
-          `${total.toLocaleString('ru-RU', { minimumFractionDigits: 2 })} ₽`
-        ]
-      });
-
-      autoTable(doc, {
-        startY: yPosition,
-        head: [['Наименование', 'Кол-во', 'Цена', 'Скидка', 'Стоимость']],
-        body: rows,
-        theme: 'grid',
-        styles: { font: 'DejaVuSans', fontStyle: 'normal', fontSize: 8 },
-        headStyles: { fillColor: color, fontStyle: 'bold', fontSize: 9 },
-      });
-
-      yPosition = (doc as any).lastAutoTable.finalY + 3;
-
-      const categoryTotal = items.reduce((sum, item) => sum + calculateItemTotalPDF(item.qty, item.price, item.discount, item.discountType), 0);
-      doc.setFontSize(10);
-      doc.setFont('DejaVuSans', 'bold');
-      doc.text(`Итого по разделу: ${categoryTotal.toLocaleString('ru-RU', { minimumFractionDigits: 2 })} ₽`, 14, yPosition);
-      yPosition += 10;
-    };
-
-    renderCategory('Звукоизоляционные материалы', soundproofingItems, [100, 120, 200]);
-    renderCategory('Общестроительные материалы', materialItems, [34, 197, 94]);
-    renderCategory('Услуги', serviceItems, [79, 70, 229]);
-
-    // Grand Total
-    if (yPosition > 240) {
-      doc.addPage();
-      yPosition = 20;
-    }
-
-    yPosition += 10;
     doc.setFontSize(12);
-    // Recalculate roughly or just sum items
-    // Better to recalculate sum of all items with their individual discounts
-    const sumAllItems =
-      soundproofingItems.reduce((s, i) => s + calculateItemTotalPDF(i.qty, i.price, i.discount, i.discountType), 0) +
-      materialItems.reduce((s, i) => s + calculateItemTotalPDF(i.qty, i.price, i.discount, i.discountType), 0) +
-      serviceItems.reduce((s, i) => s + calculateItemTotalPDF(i.qty, i.price, i.discount, i.discountType), 0);
+    doc.setTextColor(150);
+    doc.text('Эскиз / План помещения (Ошибка загрузки)', pageWidth / 2, 120, { align: 'center' });
+    doc.setTextColor(0);
+  }
+} else {
+  doc.setFillColor(240, 240, 240);
+  doc.rect(20, 70, pageWidth - 40, 100, 'F');
+  doc.setFont('DejaVuSans', 'normal');
+  doc.setFontSize(12);
+  doc.setTextColor(150);
+  doc.text('Эскиз / План помещения', pageWidth / 2, 120, { align: 'center' });
+  doc.setTextColor(0);
+}
 
-    doc.text(`Сумма: ${sumAllItems.toLocaleString('ru-RU', { minimumFractionDigits: 2 })} ₽`, 14, yPosition);
-    yPosition += 7;
+// Bottom Details
+const startY = 200;
+doc.setFontSize(11);
 
-    if (offer.discount) {
-      const discountStr = offer.discountType === 'percent' ? `${offer.discount}%` : `${offer.discount} ₽`;
-      doc.text(`Скидка на смету: ${discountStr}`, 14, yPosition);
-      yPosition += 7;
+doc.setFont('DejaVuSans', 'bold');
+doc.text('Объект:', 20, startY);
+doc.setFont('DejaVuSans', 'normal');
+doc.text(offer.address, 60, startY);
+
+doc.setFont('DejaVuSans', 'bold');
+doc.text('Заказчик:', 20, startY + 10);
+doc.setFont('DejaVuSans', 'normal');
+let customerText = offer.customerName || '-';
+if (offer.customerPhone) customerText += ` (${offer.customerPhone})`;
+doc.text(customerText, 60, startY + 10);
+
+doc.setFont('DejaVuSans', 'bold');
+doc.text('Исполнитель:', 20, startY + 20);
+doc.setFont('DejaVuSans', 'normal');
+
+let executorName = 'Валеев Чингиз Ринатович';
+if (offer.executor && offer.executor.name) {
+  executorName = offer.executor.name;
+} else if (offer.executorId) {
+  const emp = employees.find(e => e.id === offer.executorId);
+  if (emp) executorName = emp.name;
+}
+doc.text(executorName, 60, startY + 20);
+
+doc.setFont('DejaVuSans', 'bold');
+doc.text('Дата:', 20, startY + 30);
+doc.setFont('DejaVuSans', 'normal');
+doc.text(formatDate(offer.createdAt), 60, startY + 30);
+
+// === CONTENT PAGES ===
+doc.addPage();
+let yPosition = 20;
+
+// Headers
+doc.setFontSize(14);
+doc.setFont('DejaVuSans', 'bold');
+doc.text('Смета работ и материалов', 14, yPosition);
+yPosition += 15;
+
+// Categorize
+const categorizeItem = (name: string): 'soundproofing' | 'materials' | 'services' => {
+  const lowerName = name.toLowerCase();
+  if (lowerName.includes('звук') || lowerName.includes('шум')) return 'soundproofing';
+  return 'materials';
+};
+
+const soundproofingItems: Array<{ name: string, qty: number, unit: string, price: number, discount: number, discountType: string }> = [];
+const materialItems: Array<{ name: string, qty: number, unit: string, price: number, discount: number, discountType: string }> = [];
+const serviceItems: Array<{ name: string, qty: number, unit: string, price: number, discount: number, discountType: string }> = [];
+
+offer.rooms.forEach(room => {
+  room.materials.forEach(m => {
+    const category = categorizeItem(m.name);
+    const item = { name: m.name, qty: m.quantity, unit: m.unit, price: m.price, discount: m.discount || 0, discountType: m.discountType || 'percent' };
+    if (category === 'soundproofing') soundproofingItems.push(item);
+    else materialItems.push(item);
+  });
+  room.works.forEach(w => {
+    serviceItems.push({ name: w.name, qty: w.quantity, unit: w.unit, price: w.price, discount: w.discount || 0, discountType: w.discountType || 'percent' });
+  });
+});
+
+const calculateItemTotalPDF = (qty: number, price: number, discount: number, discountType: string) => {
+  let total = qty * price;
+  if (discount) {
+    if (discountType === 'percent') {
+      total = total * (1 - discount / 100);
+    } else {
+      total = total - discount;
     }
+  }
+  return total;
+}
 
-    const finalTotal = calculateOfferTotal(offer);
+const renderCategory = (title: string, items: typeof soundproofingItems, color: [number, number, number]) => {
+  if (items.length === 0) return;
 
-    doc.setFontSize(14);
-    doc.setTextColor(220, 38, 38); // Red color for final price
-    doc.text(`ИТОГО К ОПЛАТЕ: ${finalTotal.toLocaleString('ru-RU', { minimumFractionDigits: 2 })} ₽`, 14, yPosition);
-
-    doc.save(`КП_${offer.address}_${formatDate(offer.createdAt)}.pdf`);
-    toast({ title: 'PDF создан', description: 'Коммерческое предложение экспортировано в PDF' });
-  };
-
-  const exportToExcel = (offer: CommercialOffer) => {
-    const workbook = XLSX.utils.book_new();
-
-    const summaryData: any[][] = [
-      ['КОММЕРЧЕСКОЕ ПРЕДЛОЖЕНИЕ'],
-      [],
-      ['Адрес:', offer.address],
-    ];
-
-    if (offer.customerName) {
-      summaryData.push(['Заказчик:', offer.customerName]);
-    }
-    summaryData.push(['Дата:', formatDate(offer.createdAt)]);
-
-    // Categorize items
-    const categorizeItem = (name: string): 'soundproofing' | 'materials' | 'services' => {
-      const lowerName = name.toLowerCase();
-      if (lowerName.includes('звук') || lowerName.includes('шум')) return 'soundproofing';
-      return 'materials';
-    };
-
-    const soundproofingItems: Array<{ name: string, qty: number, unit: string, price: number }> = [];
-    const materialItems: Array<{ name: string, qty: number, unit: string, price: number }> = [];
-    const serviceItems: Array<{ name: string, qty: number, unit: string, price: number }> = [];
-
-    offer.rooms.forEach(room => {
-      room.materials.forEach(m => {
-        const category = categorizeItem(m.name);
-        const item = { name: m.name, qty: m.quantity, unit: m.unit, price: m.price };
-        if (category === 'soundproofing') soundproofingItems.push(item);
-        else materialItems.push(item);
-      });
-      room.works.forEach(w => {
-        serviceItems.push({ name: w.name, qty: w.quantity, unit: w.unit, price: w.price });
-      });
-    });
-
-    // Add categories to summary
-    const addCategoryToSummary = (title: string, items: typeof soundproofingItems) => {
-      if (items.length === 0) return;
-
-      summaryData.push([]);
-      summaryData.push([title]);
-      summaryData.push(['Наименование', 'Кол-во', 'Ед.', 'Цена, ₽', 'Стоимость, ₽']);
-
-      items.forEach(item => {
-        summaryData.push([
-          item.name,
-          item.qty,
-          item.unit,
-          item.price.toFixed(2),
-          (item.qty * item.price).toFixed(2)
-        ]);
-      });
-
-      const categoryTotal = items.reduce((sum, item) => sum + (item.qty * item.price), 0);
-      summaryData.push(['', '', '', 'Итого:', categoryTotal.toFixed(2)]);
-      summaryData.push(['', '', '', 'Размер скидки: 10%', '']);
-      const withMargin = categoryTotal * 1.1;
-      summaryData.push(['', '', '', 'Итого со скидкой:', withMargin.toFixed(2)]);
-    };
-
-    addCategoryToSummary('ЗВУКОИЗОЛЯЦИОННЫЕ МАТЕРИАЛЫ', soundproofingItems);
-    addCategoryToSummary('ОБЩЕСТРОИТЕЛЬНЫЕ МАТЕРИАЛЫ', materialItems);
-    addCategoryToSummary('УСЛУГИ', serviceItems);
-
-    summaryData.push([]);
-    const grandTotal = calculateOfferTotal(offer) * 1.1;
-    summaryData.push(['ИТОГОВАЯ СТОИМОСТЬ:', '', '', '', grandTotal.toFixed(2)]);
-
-    const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
-    XLSX.utils.book_append_sheet(workbook, summarySheet, 'Сводка');
-
-    XLSX.writeFile(workbook, `КП_${offer.address}_${formatDate(offer.createdAt)}.xlsx`);
-    toast({ title: 'Excel создан', description: 'Коммерческое предложение экспортировано в Excel' });
-  };
-
-  const currentOffer = selectedOffer ? offers.find(o => o.id === selectedOffer) : null;
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Icon name="Loader2" size={32} className="animate-spin" />
-      </div>
-    );
+  if (yPosition > 250) {
+    doc.addPage();
+    yPosition = 20;
   }
 
-  if (currentOffer) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div>
-            <Button variant="ghost" onClick={() => setSelectedOffer(null)} className="mb-2">
-              <Icon name="ArrowLeft" size={18} className="mr-2" />
-              Назад к списку
+  doc.setFontSize(12);
+  doc.setFont('DejaVuSans', 'bold');
+  doc.setTextColor(0);
+  doc.text(title, 14, yPosition);
+  yPosition += 5;
+
+  const rows = items.map(item => {
+    const total = calculateItemTotalPDF(item.qty, item.price, item.discount, item.discountType);
+    let discountText = '-';
+    if (item.discount) {
+      discountText = item.discountType === 'percent' ? `${item.discount}%` : `${item.discount} ₽`;
+    }
+
+    return [
+      item.name,
+      `${item.qty} ${item.unit}`,
+      `${item.price.toLocaleString('ru-RU')} ₽`,
+      discountText,
+      `${total.toLocaleString('ru-RU', { minimumFractionDigits: 2 })} ₽`
+    ]
+  });
+
+  autoTable(doc, {
+    startY: yPosition,
+    head: [['Наименование', 'Кол-во', 'Цена', 'Скидка', 'Стоимость']],
+    body: rows,
+    theme: 'grid',
+    styles: { font: 'DejaVuSans', fontStyle: 'normal', fontSize: 8 },
+    headStyles: { fillColor: color, fontStyle: 'bold', fontSize: 9 },
+  });
+
+  yPosition = (doc as any).lastAutoTable.finalY + 3;
+
+  const categoryTotal = items.reduce((sum, item) => sum + calculateItemTotalPDF(item.qty, item.price, item.discount, item.discountType), 0);
+  doc.setFontSize(10);
+  doc.setFont('DejaVuSans', 'bold');
+  doc.text(`Итого по разделу: ${categoryTotal.toLocaleString('ru-RU', { minimumFractionDigits: 2 })} ₽`, 14, yPosition);
+  yPosition += 10;
+};
+
+renderCategory('Звукоизоляционные материалы', soundproofingItems, [100, 120, 200]);
+renderCategory('Общестроительные материалы', materialItems, [34, 197, 94]);
+renderCategory('Услуги', serviceItems, [79, 70, 229]);
+
+// Grand Total
+if (yPosition > 240) {
+  doc.addPage();
+  yPosition = 20;
+}
+
+yPosition += 10;
+doc.setFontSize(12);
+// Recalculate roughly or just sum items
+// Better to recalculate sum of all items with their individual discounts
+const sumAllItems =
+  soundproofingItems.reduce((s, i) => s + calculateItemTotalPDF(i.qty, i.price, i.discount, i.discountType), 0) +
+  materialItems.reduce((s, i) => s + calculateItemTotalPDF(i.qty, i.price, i.discount, i.discountType), 0) +
+  serviceItems.reduce((s, i) => s + calculateItemTotalPDF(i.qty, i.price, i.discount, i.discountType), 0);
+
+doc.text(`Сумма: ${sumAllItems.toLocaleString('ru-RU', { minimumFractionDigits: 2 })} ₽`, 14, yPosition);
+yPosition += 7;
+
+if (offer.discount) {
+  const discountStr = offer.discountType === 'percent' ? `${offer.discount}%` : `${offer.discount} ₽`;
+  doc.text(`Скидка на смету: ${discountStr}`, 14, yPosition);
+  yPosition += 7;
+}
+
+const finalTotal = calculateOfferTotal(offer);
+
+doc.setFontSize(14);
+doc.setTextColor(220, 38, 38); // Red color for final price
+doc.text(`ИТОГО К ОПЛАТЕ: ${finalTotal.toLocaleString('ru-RU', { minimumFractionDigits: 2 })} ₽`, 14, yPosition);
+
+doc.save(`КП_${offer.address}_${formatDate(offer.createdAt)}.pdf`);
+toast({ title: 'PDF создан', description: 'Коммерческое предложение экспортировано в PDF' });
+  };
+
+const exportToExcel = (offer: CommercialOffer) => {
+  const workbook = XLSX.utils.book_new();
+
+  const summaryData: any[][] = [
+    ['КОММЕРЧЕСКОЕ ПРЕДЛОЖЕНИЕ'],
+    [],
+    ['Адрес:', offer.address],
+  ];
+
+  if (offer.customerName) {
+    summaryData.push(['Заказчик:', offer.customerName]);
+  }
+  summaryData.push(['Дата:', formatDate(offer.createdAt)]);
+
+  // Categorize items
+  const categorizeItem = (name: string): 'soundproofing' | 'materials' | 'services' => {
+    const lowerName = name.toLowerCase();
+    if (lowerName.includes('звук') || lowerName.includes('шум')) return 'soundproofing';
+    return 'materials';
+  };
+
+  const soundproofingItems: Array<{ name: string, qty: number, unit: string, price: number }> = [];
+  const materialItems: Array<{ name: string, qty: number, unit: string, price: number }> = [];
+  const serviceItems: Array<{ name: string, qty: number, unit: string, price: number }> = [];
+
+  offer.rooms.forEach(room => {
+    room.materials.forEach(m => {
+      const category = categorizeItem(m.name);
+      const item = { name: m.name, qty: m.quantity, unit: m.unit, price: m.price };
+      if (category === 'soundproofing') soundproofingItems.push(item);
+      else materialItems.push(item);
+    });
+    room.works.forEach(w => {
+      serviceItems.push({ name: w.name, qty: w.quantity, unit: w.unit, price: w.price });
+    });
+  });
+
+  // Add categories to summary
+  const addCategoryToSummary = (title: string, items: typeof soundproofingItems) => {
+    if (items.length === 0) return;
+
+    summaryData.push([]);
+    summaryData.push([title]);
+    summaryData.push(['Наименование', 'Кол-во', 'Ед.', 'Цена, ₽', 'Стоимость, ₽']);
+
+    items.forEach(item => {
+      summaryData.push([
+        item.name,
+        item.qty,
+        item.unit,
+        item.price.toFixed(2),
+        (item.qty * item.price).toFixed(2)
+      ]);
+    });
+
+    const categoryTotal = items.reduce((sum, item) => sum + (item.qty * item.price), 0);
+    summaryData.push(['', '', '', 'Итого:', categoryTotal.toFixed(2)]);
+    summaryData.push(['', '', '', 'Размер скидки: 10%', '']);
+    const withMargin = categoryTotal * 1.1;
+    summaryData.push(['', '', '', 'Итого со скидкой:', withMargin.toFixed(2)]);
+  };
+
+  addCategoryToSummary('ЗВУКОИЗОЛЯЦИОННЫЕ МАТЕРИАЛЫ', soundproofingItems);
+  addCategoryToSummary('ОБЩЕСТРОИТЕЛЬНЫЕ МАТЕРИАЛЫ', materialItems);
+  addCategoryToSummary('УСЛУГИ', serviceItems);
+
+  summaryData.push([]);
+  const grandTotal = calculateOfferTotal(offer) * 1.1;
+  summaryData.push(['ИТОГОВАЯ СТОИМОСТЬ:', '', '', '', grandTotal.toFixed(2)]);
+
+  const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
+  XLSX.utils.book_append_sheet(workbook, summarySheet, 'Сводка');
+
+  XLSX.writeFile(workbook, `КП_${offer.address}_${formatDate(offer.createdAt)}.xlsx`);
+  toast({ title: 'Excel создан', description: 'Коммерческое предложение экспортировано в Excel' });
+};
+
+const currentOffer = selectedOffer ? offers.find(o => o.id === selectedOffer) : null;
+
+if (loading) {
+  return (
+    <div className="flex items-center justify-center h-64">
+      <Icon name="Loader2" size={32} className="animate-spin" />
+    </div>
+  );
+}
+
+if (currentOffer) {
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <Button variant="ghost" onClick={() => setSelectedOffer(null)} className="mb-2">
+            <Icon name="ArrowLeft" size={18} className="mr-2" />
+            Назад к списку
+          </Button>
+          <h2 className="text-2xl font-bold">{currentOffer.address}</h2>
+          {currentOffer.customerName && (
+            <p className="text-muted-foreground">Заказчик: {currentOffer.customerName}</p>
+          )}
+          <p className="text-muted-foreground">Создано: {formatDate(currentOffer.createdAt)}</p>
+        </div>
+        <div className="text-right">
+          <p className="text-sm text-muted-foreground">Общая сумма</p>
+          <p className="text-3xl font-bold text-primary">
+            {calculateOfferTotal(currentOffer).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽
+          </p>
+          <div className="flex gap-2 mt-3">
+            <Button variant="outline" size="sm" onClick={() => {
+              exportToPDF(currentOffer, user.logo);
+            }}>
+              <Icon name="FileDown" size={16} className="mr-1" />
+              PDF
             </Button>
-            <h2 className="text-2xl font-bold">{currentOffer.address}</h2>
-            {currentOffer.customerName && (
-              <p className="text-muted-foreground">Заказчик: {currentOffer.customerName}</p>
-            )}
-            <p className="text-muted-foreground">Создано: {formatDate(currentOffer.createdAt)}</p>
+            <Button variant="outline" size="sm" onClick={() => exportToExcel(currentOffer)}>
+              <Icon name="FileSpreadsheet" size={16} className="mr-1" />
+              Excel
+            </Button>
           </div>
-          <div className="text-right">
-            <p className="text-sm text-muted-foreground">Общая сумма</p>
-            <p className="text-3xl font-bold text-primary">
-              {calculateOfferTotal(currentOffer).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽
-            </p>
-            <div className="flex gap-2 mt-3">
-              <Button variant="outline" size="sm" onClick={() => {
-                exportToPDF(currentOffer, user.logo);
-              }}>
-                <Icon name="FileDown" size={16} className="mr-1" />
-                PDF
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => exportToExcel(currentOffer)}>
-                <Icon name="FileSpreadsheet" size={16} className="mr-1" />
-                Excel
-              </Button>
-            </div>
-            <div className="mt-4 space-y-2">
-              <div className="mt-4 space-y-3 p-4 bg-muted/50 rounded-lg border">
-                <div className="flex items-center gap-2 justify-between">
-                  <Label htmlFor="globalDiscount" className="text-sm font-medium">Скидка на смету (%):</Label>
-                  <Input
-                    id="globalDiscount"
-                    type="number"
-                    className="w-32 h-8 bg-background"
-                    placeholder="0"
-                    defaultValue={currentOffer.discount || 0}
-                    onChange={(e) => handleUpdateOffer(currentOffer.id, { discount: Number(e.target.value), discountType: 'percent' })}
-                  />
-                </div>
+          <div className="mt-4 space-y-2">
+            <div className="mt-4 space-y-3 p-4 bg-muted/50 rounded-lg border">
+              <div className="flex items-center gap-2 justify-between">
+                <Label htmlFor="globalDiscount" className="text-sm font-medium">Скидка на смету (%):</Label>
+                <Input
+                  id="globalDiscount"
+                  type="number"
+                  className="w-32 h-8 bg-background"
+                  placeholder="0"
+                  defaultValue={currentOffer.discount || 0}
+                  onChange={(e) => handleUpdateOffer(currentOffer.id, { discount: Number(e.target.value), discountType: 'percent' })}
+                />
+              </div>
 
-                <div className="flex items-center gap-2 justify-between">
-                  <Label className="text-sm font-medium">Исполнитель:</Label>
-                  <div className="w-48">
-                    <Select
-                      value={currentOffer.executorId?.toString()}
-                      onValueChange={(val) => handleUpdateOffer(currentOffer.id, { executorId: Number(val) })}
+              <div className="flex items-center gap-2 justify-between">
+                <Label className="text-sm font-medium">Исполнитель:</Label>
+                <div className="w-48">
+                  <Select
+                    value={currentOffer.executorId?.toString()}
+                    onValueChange={(val) => handleUpdateOffer(currentOffer.id, { executorId: Number(val) })}
+                  >
+                    <SelectTrigger className="h-8 bg-background w-full">
+                      <SelectValue placeholder="Выберите..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {employees.map((emp: any) => (
+                        <SelectItem key={emp.id} value={emp.id.toString()}>
+                          {emp.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 justify-between">
+                <Label htmlFor="logoUrlDetails" className="text-sm font-medium">Логотип:</Label>
+                <div className="flex items-center gap-2 w-48 justify-end">
+                  {user.logo ? (
+                    <div className="flex items-center gap-2">
+                      <img src={user.logo} alt="Logo" className="h-8 w-auto object-contain bg-white rounded border" />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive"
+                        onClick={() => handleLogoUpdate('')}
+                      >
+                        <Icon name="Trash2" size={14} />
+                      </Button>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-muted-foreground mr-2">Нет логотипа</span>
+                  )}
+
+                  <div className="relative">
+                    <Input
+                      type="file"
+                      id="logoUpload"
+                      className="hidden"
+                      accept="image/*"
+                      onChange={handleLogoUpload}
+                      disabled={isUploading}
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 px-2"
+                      onClick={() => document.getElementById('logoUpload')?.click()}
+                      disabled={isUploading}
                     >
-                      <SelectTrigger className="h-8 bg-background w-full">
-                        <SelectValue placeholder="Выберите..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {employees.map((emp: any) => (
-                          <SelectItem key={emp.id} value={emp.id.toString()}>
-                            {emp.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      {isUploading ? <Icon name="Loader2" size={14} className="animate-spin" /> : <Icon name="Upload" size={14} />}
+                    </Button>
                   </div>
                 </div>
+              </div>
 
-                <div className="flex items-center gap-2 justify-between">
-                  <Label htmlFor="logoUrlDetails" className="text-sm font-medium">Логотип:</Label>
-                  <div className="flex items-center gap-2 w-48 justify-end">
-                    {user.logo ? (
-                      <div className="flex items-center gap-2">
-                        <img src={user.logo} alt="Logo" className="h-8 w-auto object-contain bg-white rounded border" />
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive"
-                          onClick={() => handleLogoUpdate('')}
-                        >
-                          <Icon name="Trash2" size={14} />
-                        </Button>
-                      </div>
-                    ) : (
-                      <span className="text-xs text-muted-foreground mr-2">Нет логотипа</span>
-                    )}
-
-                    <div className="relative">
-                      <Input
-                        type="file"
-                        id="logoUpload"
-                        className="hidden"
-                        accept="image/*"
-                        onChange={handleLogoUpload}
-                        disabled={isUploading}
-                      />
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8 px-2"
-                        onClick={() => document.getElementById('logoUpload')?.click()}
-                        disabled={isUploading}
-                      >
-                        {isUploading ? <Icon name="Loader2" size={14} className="animate-spin" /> : <Icon name="Upload" size={14} />}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 justify-between">
-                  <Label className="text-sm font-medium">План помещения:</Label>
-                  <div className="flex items-center gap-2 w-48 justify-end">
-                    {currentOffer.planImage && (
-                      <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
-                        <a href={currentOffer.planImage} target="_blank" rel="noopener noreferrer">
-                          <Icon name="Eye" size={14} />
-                        </a>
-                      </Button>
-                    )}
-                    <div className="relative">
-                      <Input
-                        type="file"
-                        id="planImageUpload"
-                        className="hidden"
-                        onChange={(e) => handleFileUpload(e, currentOffer.id)}
-                        disabled={isUploading}
-                      />
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8"
-                        onClick={() => document.getElementById('planImageUpload')?.click()}
-                        disabled={isUploading}
-                      >
-                        {isUploading ? <Icon name="Loader2" size={14} className="animate-spin" /> : <Icon name="Upload" size={14} />}
-                        <span className="ml-2">Загрузить</span>
-                      </Button>
-                    </div>
+              <div className="flex items-center gap-2 justify-between">
+                <Label className="text-sm font-medium">План помещения:</Label>
+                <div className="flex items-center gap-2 w-48 justify-end">
+                  {currentOffer.planImage && (
+                    <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                      <a href={currentOffer.planImage} target="_blank" rel="noopener noreferrer">
+                        <Icon name="Eye" size={14} />
+                      </a>
+                    </Button>
+                  )}
+                  <div className="relative">
+                    <Input
+                      type="file"
+                      id="planImageUpload"
+                      className="hidden"
+                      onChange={(e) => handleFileUpload(e, currentOffer.id)}
+                      disabled={isUploading}
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8"
+                      onClick={() => document.getElementById('planImageUpload')?.click()}
+                      disabled={isUploading}
+                    >
+                      {isUploading ? <Icon name="Loader2" size={14} className="animate-spin" /> : <Icon name="Upload" size={14} />}
+                      <span className="ml-2">Загрузить</span>
+                    </Button>
                   </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-
-        <div className="flex justify-end">
-          <Dialog open={isRoomDialogOpen} onOpenChange={setIsRoomDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Icon name="Plus" size={18} className="mr-2" />
-                Добавить помещение
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Новое помещение</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleAddRoom} className="space-y-4">
-                <div>
-                  <Label htmlFor="name">Название помещения *</Label>
-                  <Input id="name" name="name" placeholder="Гостиная" required />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="area">Площадь пола, м² *</Label>
-                    <Input id="area" name="area" type="number" step="0.01" placeholder="20.5" required />
-                  </div>
-                  <div>
-                    <Label htmlFor="wallArea">Площадь стен, м² *</Label>
-                    <Input id="wallArea" name="wallArea" type="number" step="0.01" placeholder="45.8" required />
-                  </div>
-                </div>
-                <Button type="submit" className="w-full">Добавить помещение</Button>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </div>
-
-        <div className="grid gap-4">
-          {currentOffer.rooms.map(room => (
-            <Card key={room.id}>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>{room.name}</CardTitle>
-                    <div className="flex gap-4 text-sm text-muted-foreground mt-1">
-                      <span>Пол: {room.area} м²</span>
-                      <span>Стены: {room.wallArea} м²</span>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm text-muted-foreground">Сумма</p>
-                    <p className="text-xl font-bold">
-                      {calculateRoomTotal(room).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽
-                    </p>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="font-semibold flex items-center gap-2">
-                      <Icon name="Wrench" size={16} />
-                      Работы
-                    </h4>
-                    <Dialog open={isWorkDialogOpen} onOpenChange={setIsWorkDialogOpen}>
-                      <DialogTrigger asChild>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setSelectedRoom(room.id)}
-                        >
-                          <Icon name="Plus" size={16} className="mr-1" />
-                          Добавить
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Добавить работу</DialogTitle>
-                        </DialogHeader>
-                        <form id="workForm" onSubmit={handleAddWork} className="space-y-4">
-                          <div>
-                            <Label htmlFor="workTemplate">Выбрать из списка</Label>
-                            <select
-                              id="workTemplate"
-                              className="w-full border rounded-lg px-3 py-2 text-sm"
-                              value={selectedWorkTemplate}
-                              onChange={(e) => handleWorkTemplateChange(e.target.value)}
-                            >
-                              <option value="">Выберите типовую работу</option>
-                              <optgroup label="Отделочные работы">
-                                <option value="Штукатурка стен">Штукатурка стен</option>
-                                <option value="Шпаклевка стен под покраску">Шпаклевка стен под покраску</option>
-                                <option value="Поклейка обоев">Поклейка обоев</option>
-                                <option value="Окраска стен">Окраска стен</option>
-                                <option value="Окраска потолка">Окраска потолка</option>
-                              </optgroup>
-                              <optgroup label="Полы и потолки">
-                                <option value="Укладка плитки на пол">Укладка плитки на пол</option>
-                                <option value="Укладка плитки на стены">Укладка плитки на стены</option>
-                                <option value="Укладка ламината">Укладка ламината</option>
-                                <option value="Монтаж натяжного потолка">Монтаж натяжного потолка</option>
-                                <option value="Устройство стяжки пола">Устройство стяжки пола</option>
-                                <option value="Гидроизоляция пола">Гидроизоляция пола</option>
-                              </optgroup>
-                              <optgroup label="Гипсокартон">
-                                <option value="Монтаж гипсокартона на стены">Монтаж гипсокартона на стены</option>
-                                <option value="Монтаж гипсокартона на потолок">Монтаж гипсокартона на потолок</option>
-                                <option value="Устройство перегородки">Устройство перегородки</option>
-                              </optgroup>
-                              <optgroup label="Двери и декор">
-                                <option value="Установка двери межкомнатной">Установка двери межкомнатной</option>
-                                <option value="Установка двери входной">Установка двери входной</option>
-                                <option value="Монтаж плинтуса">Монтаж плинтуса</option>
-                                <option value="Монтаж карниза потолочного">Монтаж карниза потолочного</option>
-                              </optgroup>
-                              <optgroup label="Электрика">
-                                <option value="Электромонтажные работы">Электромонтажные работы</option>
-                                <option value="Монтаж розетки/выключателя">Монтаж розетки/выключателя</option>
-                                <option value="Монтаж светильника">Монтаж светильника</option>
-                                <option value="Прокладка кабеля">Прокладка кабеля</option>
-                              </optgroup>
-                              <optgroup label="Сантехника">
-                                <option value="Сантехнические работы">Сантехнические работы</option>
-                                <option value="Установка унитаза">Установка унитаза</option>
-                                <option value="Установка раковины">Установка раковины</option>
-                                <option value="Установка ванны">Установка ванны</option>
-                                <option value="Установка душевой кабины">Установка душевой кабины</option>
-                                <option value="Установка смесителя">Установка смесителя</option>
-                                <option value="Установка полотенцесушителя">Установка полотенцесушителя</option>
-                                <option value="Прокладка труб водоснабжения">Прокладка труб водоснабжения</option>
-                                <option value="Прокладка канализации">Прокладка канализации</option>
-                              </optgroup>
-                              <optgroup label="Демонтаж">
-                                <option value="Демонтаж стяжки">Демонтаж стяжки</option>
-                                <option value="Демонтаж плитки">Демонтаж плитки</option>
-                                <option value="Демонтаж перегородок">Демонтаж перегородок</option>
-                                <option value="Вывоз мусора">Вывоз мусора</option>
-                              </optgroup>
-                              <option value="custom">➕ Своя работа</option>
-                            </select>
-                          </div>
-                          <div>
-                            <Label htmlFor="workName">Название работы *</Label>
-                            <Input id="workName" name="name" placeholder="Штукатурка стен" required />
-                          </div>
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <Label htmlFor="workQuantity">Количество *</Label>
-                              <Input id="workQuantity" name="quantity" type="number" step="0.01" placeholder="45.8" required />
-                            </div>
-                            <div>
-                              <Label htmlFor="workUnit">Единица *</Label>
-                              <select id="workUnit" name="unit" className="w-full border rounded-lg px-3 py-2 text-sm" required>
-                                <option value="м2">м²</option>
-                                <option value="шт">шт</option>
-                                <option value="мп">мп</option>
-                              </select>
-                            </div>
-                          </div>
-                          <div>
-                            <Label htmlFor="workPrice">Цена за единицу, ₽ *</Label>
-                            <Input id="workPrice" name="price" type="number" step="0.01" placeholder="450" required />
-                          </div>
-                          <Button type="submit" className="w-full">Добавить работу</Button>
-                        </form>
-                      </DialogContent>
-                    </Dialog>
-                  </div>
-                  {room.works.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">Работы не добавлены</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {room.works.map(work => (
-                        <div key={work.id} className="flex items-center justify-between p-2 bg-muted rounded-lg">
-                          <div>
-                            <p className="font-medium">{work.name}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {work.quantity} {work.unit} × {work.price.toLocaleString('ru-RU', { minimumFractionDigits: 2 })} ₽
-                            </p>
-                          </div>
-                          <p className="font-semibold">
-                            {(work.quantity * work.price).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="font-semibold flex items-center gap-2">
-                      <Icon name="Package" size={16} />
-                      Материалы
-                    </h4>
-                    <Dialog open={isMaterialDialogOpen} onOpenChange={setIsMaterialDialogOpen}>
-                      <DialogTrigger asChild>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setSelectedRoom(room.id)}
-                        >
-                          <Icon name="Plus" size={16} className="mr-1" />
-                          Добавить
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Добавить материал</DialogTitle>
-                        </DialogHeader>
-                        <form onSubmit={handleAddMaterial} className="space-y-4">
-                          <div>
-                            <Label htmlFor="materialName">Название материала *</Label>
-                            <Input id="materialName" name="name" placeholder="Штукатурка Кнауф" required />
-                          </div>
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <Label htmlFor="materialQuantity">Количество *</Label>
-                              <Input id="materialQuantity" name="quantity" type="number" step="0.01" placeholder="15" required />
-                            </div>
-                            <div>
-                              <Label htmlFor="materialUnit">Единица *</Label>
-                              <select id="materialUnit" name="unit" className="w-full border rounded-lg px-3 py-2 text-sm" required>
-                                <option value="шт">шт</option>
-                                <option value="упаковок">упаковок</option>
-                                <option value="кг">кг</option>
-                                <option value="мп">мп</option>
-                                <option value="м2">м²</option>
-                              </select>
-                            </div>
-                          </div>
-                          <div>
-                            <Label htmlFor="materialPrice">Цена за единицу, ₽ *</Label>
-                            <Input id="materialPrice" name="price" type="number" step="0.01" placeholder="380" required />
-                          </div>
-                          <Button type="submit" className="w-full">Добавить материал</Button>
-                        </form>
-                      </DialogContent>
-                    </Dialog>
-                  </div>
-                  {room.materials.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">Материалы не добавлены</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {room.materials.map(material => (
-                        <div key={material.id} className="flex items-center justify-between p-2 bg-muted rounded-lg">
-                          <div>
-                            <p className="font-medium">{material.name}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {material.quantity} {material.unit} × {material.price.toLocaleString('ru-RU', { minimumFractionDigits: 2 })} ₽
-                            </p>
-                          </div>
-                          <p className="font-semibold">
-                            {(material.quantity * material.price).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {currentOffer.rooms.length === 0 && (
-          <Card>
-            <CardContent className="pt-6 text-center text-muted-foreground">
-              <Icon name="Home" size={48} className="mx-auto mb-2 opacity-50" />
-              <p>Помещения не добавлены</p>
-            </CardContent>
-          </Card>
-        )}
       </div>
-    );
-  }
 
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold mb-2">Коммерческие предложения</h2>
-          <p className="text-muted-foreground">Создание коммерческих предложений для клиентов</p>
-        </div>
-        <Dialog open={isOfferDialogOpen} onOpenChange={setIsOfferDialogOpen}>
+      <div className="flex justify-end">
+        <Dialog open={isRoomDialogOpen} onOpenChange={setIsRoomDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <Icon name="Plus" size={18} className="mr-2" />
-              Создать КП
+              Добавить помещение
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Новое коммерческое предложение</DialogTitle>
+              <DialogTitle>Новое помещение</DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleAddOffer} className="space-y-4">
+            <form onSubmit={handleAddRoom} className="space-y-4">
               <div>
-                <Label htmlFor="customerName">Имя Фамилия заказчика</Label>
-                <Input
-                  id="customerName"
-                  name="customerName"
-                  placeholder="Иван Петров"
-                />
+                <Label htmlFor="name">Название помещения *</Label>
+                <Input id="name" name="name" placeholder="Гостиная" required />
               </div>
-              <div>
-                <Label htmlFor="customerPhone">Телефон заказчика</Label>
-                <Input
-                  id="customerPhone"
-                  name="customerPhone"
-                  placeholder="+7 (999) 000-00-00"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="area">Площадь пола, м² *</Label>
+                  <Input id="area" name="area" type="number" step="0.01" placeholder="20.5" required />
+                </div>
+                <div>
+                  <Label htmlFor="wallArea">Площадь стен, м² *</Label>
+                  <Input id="wallArea" name="wallArea" type="number" step="0.01" placeholder="45.8" required />
+                </div>
               </div>
-              <div>
-                <Label htmlFor="address">Адрес объекта *</Label>
-                <Input
-                  id="address"
-                  name="address"
-                  placeholder="г. Москва, ул. Ленина, д. 15, кв. 42"
-                  required
-                />
-              </div>
-              <Button type="submit" className="w-full">Создать КП</Button>
+              <Button type="submit" className="w-full">Добавить помещение</Button>
             </form>
           </DialogContent>
         </Dialog>
       </div>
 
       <div className="grid gap-4">
-        {offers.length === 0 ? (
-          <Card>
-            <CardContent className="pt-6 text-center text-muted-foreground">
-              <Icon name="FileText" size={48} className="mx-auto mb-2 opacity-50" />
-              <p>Коммерческие предложения не созданы</p>
-            </CardContent>
-          </Card>
-        ) : (
-          offers.map(offer => (
-            <Card
-              key={offer.id}
-              className="cursor-pointer hover:shadow-lg transition-shadow"
-              onClick={() => setSelectedOffer(offer.id)}
-            >
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <Icon name="FileText" size={20} />
-                      {offer.address}
-                    </CardTitle>
-                    {offer.customerName && (
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Заказчик: {offer.customerName}
-                      </p>
-                    )}
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Создано: {formatDate(offer.createdAt)} • Помещений: {offer.rooms.length}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm text-muted-foreground">Сумма</p>
-                    <p className="text-2xl font-bold text-primary">
-                      {calculateOfferTotal(offer).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽
-                    </p>
+        {currentOffer.rooms.map(room => (
+          <Card key={room.id}>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>{room.name}</CardTitle>
+                  <div className="flex gap-4 text-sm text-muted-foreground mt-1">
+                    <span>Пол: {room.area} м²</span>
+                    <span>Стены: {room.wallArea} м²</span>
                   </div>
                 </div>
-              </CardHeader>
-            </Card>
-          ))
-        )}
+                <div className="text-right">
+                  <p className="text-sm text-muted-foreground">Сумма</p>
+                  <p className="text-xl font-bold">
+                    {calculateRoomTotal(room).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽
+                  </p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-semibold flex items-center gap-2">
+                    <Icon name="Wrench" size={16} />
+                    Работы
+                  </h4>
+                  <Dialog open={isWorkDialogOpen} onOpenChange={setIsWorkDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setSelectedRoom(room.id)}
+                      >
+                        <Icon name="Plus" size={16} className="mr-1" />
+                        Добавить
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Добавить работу</DialogTitle>
+                      </DialogHeader>
+                      <form id="workForm" onSubmit={handleAddWork} className="space-y-4">
+                        <div>
+                          <Label htmlFor="workTemplate">Выбрать из списка</Label>
+                          <select
+                            id="workTemplate"
+                            className="w-full border rounded-lg px-3 py-2 text-sm"
+                            value={selectedWorkTemplate}
+                            onChange={(e) => handleWorkTemplateChange(e.target.value)}
+                          >
+                            <option value="">Выберите типовую работу</option>
+                            <optgroup label="Отделочные работы">
+                              <option value="Штукатурка стен">Штукатурка стен</option>
+                              <option value="Шпаклевка стен под покраску">Шпаклевка стен под покраску</option>
+                              <option value="Поклейка обоев">Поклейка обоев</option>
+                              <option value="Окраска стен">Окраска стен</option>
+                              <option value="Окраска потолка">Окраска потолка</option>
+                            </optgroup>
+                            <optgroup label="Полы и потолки">
+                              <option value="Укладка плитки на пол">Укладка плитки на пол</option>
+                              <option value="Укладка плитки на стены">Укладка плитки на стены</option>
+                              <option value="Укладка ламината">Укладка ламината</option>
+                              <option value="Монтаж натяжного потолка">Монтаж натяжного потолка</option>
+                              <option value="Устройство стяжки пола">Устройство стяжки пола</option>
+                              <option value="Гидроизоляция пола">Гидроизоляция пола</option>
+                            </optgroup>
+                            <optgroup label="Гипсокартон">
+                              <option value="Монтаж гипсокартона на стены">Монтаж гипсокартона на стены</option>
+                              <option value="Монтаж гипсокартона на потолок">Монтаж гипсокартона на потолок</option>
+                              <option value="Устройство перегородки">Устройство перегородки</option>
+                            </optgroup>
+                            <optgroup label="Двери и декор">
+                              <option value="Установка двери межкомнатной">Установка двери межкомнатной</option>
+                              <option value="Установка двери входной">Установка двери входной</option>
+                              <option value="Монтаж плинтуса">Монтаж плинтуса</option>
+                              <option value="Монтаж карниза потолочного">Монтаж карниза потолочного</option>
+                            </optgroup>
+                            <optgroup label="Электрика">
+                              <option value="Электромонтажные работы">Электромонтажные работы</option>
+                              <option value="Монтаж розетки/выключателя">Монтаж розетки/выключателя</option>
+                              <option value="Монтаж светильника">Монтаж светильника</option>
+                              <option value="Прокладка кабеля">Прокладка кабеля</option>
+                            </optgroup>
+                            <optgroup label="Сантехника">
+                              <option value="Сантехнические работы">Сантехнические работы</option>
+                              <option value="Установка унитаза">Установка унитаза</option>
+                              <option value="Установка раковины">Установка раковины</option>
+                              <option value="Установка ванны">Установка ванны</option>
+                              <option value="Установка душевой кабины">Установка душевой кабины</option>
+                              <option value="Установка смесителя">Установка смесителя</option>
+                              <option value="Установка полотенцесушителя">Установка полотенцесушителя</option>
+                              <option value="Прокладка труб водоснабжения">Прокладка труб водоснабжения</option>
+                              <option value="Прокладка канализации">Прокладка канализации</option>
+                            </optgroup>
+                            <optgroup label="Демонтаж">
+                              <option value="Демонтаж стяжки">Демонтаж стяжки</option>
+                              <option value="Демонтаж плитки">Демонтаж плитки</option>
+                              <option value="Демонтаж перегородок">Демонтаж перегородок</option>
+                              <option value="Вывоз мусора">Вывоз мусора</option>
+                            </optgroup>
+                            <option value="custom">➕ Своя работа</option>
+                          </select>
+                        </div>
+                        <div>
+                          <Label htmlFor="workName">Название работы *</Label>
+                          <Input id="workName" name="name" placeholder="Штукатурка стен" required />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="workQuantity">Количество *</Label>
+                            <Input id="workQuantity" name="quantity" type="number" step="0.01" placeholder="45.8" required />
+                          </div>
+                          <div>
+                            <Label htmlFor="workUnit">Единица *</Label>
+                            <select id="workUnit" name="unit" className="w-full border rounded-lg px-3 py-2 text-sm" required>
+                              <option value="м2">м²</option>
+                              <option value="шт">шт</option>
+                              <option value="мп">мп</option>
+                            </select>
+                          </div>
+                        </div>
+                        <div>
+                          <Label htmlFor="workPrice">Цена за единицу, ₽ *</Label>
+                          <Input id="workPrice" name="price" type="number" step="0.01" placeholder="450" required />
+                        </div>
+                        <Button type="submit" className="w-full">Добавить работу</Button>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+                {room.works.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Работы не добавлены</p>
+                ) : (
+                  <div className="space-y-2">
+                    {room.works.map(work => (
+                      <div key={work.id} className="flex items-center justify-between p-2 bg-muted rounded-lg">
+                        <div>
+                          <p className="font-medium">{work.name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {work.quantity} {work.unit} × {work.price.toLocaleString('ru-RU', { minimumFractionDigits: 2 })} ₽
+                          </p>
+                        </div>
+                        <p className="font-semibold">
+                          {(work.quantity * work.price).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-semibold flex items-center gap-2">
+                    <Icon name="Package" size={16} />
+                    Материалы
+                  </h4>
+                  <Dialog open={isMaterialDialogOpen} onOpenChange={setIsMaterialDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setSelectedRoom(room.id)}
+                      >
+                        <Icon name="Plus" size={16} className="mr-1" />
+                        Добавить
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Добавить материал</DialogTitle>
+                      </DialogHeader>
+                      <form onSubmit={handleAddMaterial} className="space-y-4">
+                        <div>
+                          <Label htmlFor="materialName">Название материала *</Label>
+                          <Input id="materialName" name="name" placeholder="Штукатурка Кнауф" required />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="materialQuantity">Количество *</Label>
+                            <Input id="materialQuantity" name="quantity" type="number" step="0.01" placeholder="15" required />
+                          </div>
+                          <div>
+                            <Label htmlFor="materialUnit">Единица *</Label>
+                            <select id="materialUnit" name="unit" className="w-full border rounded-lg px-3 py-2 text-sm" required>
+                              <option value="шт">шт</option>
+                              <option value="упаковок">упаковок</option>
+                              <option value="кг">кг</option>
+                              <option value="мп">мп</option>
+                              <option value="м2">м²</option>
+                            </select>
+                          </div>
+                        </div>
+                        <div>
+                          <Label htmlFor="materialPrice">Цена за единицу, ₽ *</Label>
+                          <Input id="materialPrice" name="price" type="number" step="0.01" placeholder="380" required />
+                        </div>
+                        <Button type="submit" className="w-full">Добавить материал</Button>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+                {room.materials.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Материалы не добавлены</p>
+                ) : (
+                  <div className="space-y-2">
+                    {room.materials.map(material => (
+                      <div key={material.id} className="flex items-center justify-between p-2 bg-muted rounded-lg">
+                        <div>
+                          <p className="font-medium">{material.name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {material.quantity} {material.unit} × {material.price.toLocaleString('ru-RU', { minimumFractionDigits: 2 })} ₽
+                          </p>
+                        </div>
+                        <p className="font-semibold">
+                          {(material.quantity * material.price).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
+
+      {currentOffer.rooms.length === 0 && (
+        <Card>
+          <CardContent className="pt-6 text-center text-muted-foreground">
+            <Icon name="Home" size={48} className="mx-auto mb-2 opacity-50" />
+            <p>Помещения не добавлены</p>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
+}
+
+return (
+  <div className="space-y-6">
+    <div className="flex items-center justify-between">
+      <div>
+        <h2 className="text-2xl font-bold mb-2">Коммерческие предложения</h2>
+        <p className="text-muted-foreground">Создание коммерческих предложений для клиентов</p>
+      </div>
+      <Dialog open={isOfferDialogOpen} onOpenChange={setIsOfferDialogOpen}>
+        <DialogTrigger asChild>
+          <Button>
+            <Icon name="Plus" size={18} className="mr-2" />
+            Создать КП
+          </Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Новое коммерческое предложение</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleAddOffer} className="space-y-4">
+            <div>
+              <Label htmlFor="customerName">Имя Фамилия заказчика</Label>
+              <Input
+                id="customerName"
+                name="customerName"
+                placeholder="Иван Петров"
+              />
+            </div>
+            <div>
+              <Label htmlFor="customerPhone">Телефон заказчика</Label>
+              <Input
+                id="customerPhone"
+                name="customerPhone"
+                placeholder="+7 (999) 000-00-00"
+              />
+            </div>
+            <div>
+              <Label htmlFor="address">Адрес объекта *</Label>
+              <Input
+                id="address"
+                name="address"
+                placeholder="г. Москва, ул. Ленина, д. 15, кв. 42"
+                required
+              />
+            </div>
+            <Button type="submit" className="w-full">Создать КП</Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+
+    <div className="grid gap-4">
+      {offers.length === 0 ? (
+        <Card>
+          <CardContent className="pt-6 text-center text-muted-foreground">
+            <Icon name="FileText" size={48} className="mx-auto mb-2 opacity-50" />
+            <p>Коммерческие предложения не созданы</p>
+          </CardContent>
+        </Card>
+      ) : (
+        offers.map(offer => (
+          <Card
+            key={offer.id}
+            className="cursor-pointer hover:shadow-lg transition-shadow"
+            onClick={() => setSelectedOffer(offer.id)}
+          >
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Icon name="FileText" size={20} />
+                    {offer.address}
+                  </CardTitle>
+                  {offer.customerName && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Заказчик: {offer.customerName}
+                    </p>
+                  )}
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Создано: {formatDate(offer.createdAt)} • Помещений: {offer.rooms.length}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-muted-foreground">Сумма</p>
+                  <p className="text-2xl font-bold text-primary">
+                    {calculateOfferTotal(offer).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽
+                  </p>
+                </div>
+              </div>
+            </CardHeader>
+          </Card>
+        ))
+      )}
+    </div>
+  </div>
+);
 };
