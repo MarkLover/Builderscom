@@ -12,6 +12,7 @@ import * as XLSX from 'xlsx';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { commercialOffersService, CommercialOffer, Room, Work, Material } from '@/services/commercial-offers.service';
 import { employeesService } from '@/services/employees.service';
+import { usersService } from '@/services/users.service';
 
 interface CommercialOffersProps {
   user: any;
@@ -122,6 +123,43 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
       toast({ title: 'Успешно', description: 'План помещения загружен' });
     } catch (error) {
       toast({ title: 'Ошибка', description: 'Не удалось загрузить файл', variant: 'destructive' });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleLogoUpdate = async (url: string) => {
+    try {
+      // We need to update the user context/state as well.
+      // Assuming 'user' is passed as prop and parent handles update or we reload.
+      // Since we can't easily update parent state from here without a callback, we'll just call API and reload page or use a callback if available.
+      // For now, let's assume we need to emit an event or just refresh (not ideal).
+      // Ideally, CommercialOffers should receive a `onUserUpdate` prop.
+      // Let's check props. Only `user` is passed.
+      // We will update via API, and then maybe force a reload or just let the user know.
+
+      if (user && user.id) {
+        await usersService.update(user.id, { logo: url });
+        user.logo = url; // Mutate prop locally for immediate feedback (anti-pattern but effective for now)
+        toast({ title: 'Успешно', description: 'Логотип обновлен' });
+        // Force re-render?
+        setOffers([...offers]);
+      }
+    } catch (error) {
+      toast({ title: 'Ошибка', description: 'Не удалось обновить логотип', variant: 'destructive' });
+    }
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    const file = e.target.files[0];
+
+    try {
+      setIsUploading(true);
+      const { url } = await commercialOffersService.uploadFile(file);
+      await handleLogoUpdate(url);
+    } catch (error) {
+      toast({ title: 'Ошибка', description: 'Не удалось загрузить логотип', variant: 'destructive' });
     } finally {
       setIsUploading(false);
     }
@@ -330,7 +368,6 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
     doc.setFont('DejaVuSans');
 
     const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
 
     // === COVER PAGE ===
     // Logo
@@ -528,7 +565,7 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
 
     yPosition += 10;
     doc.setFontSize(12);
-    const subtotal = calculateOfferTotal(offer) / (offer.discount ? (offer.discountType === 'percent' ? (1 - offer.discount / 100) : 1) : 1); // Reverse calc roughly or just sum items
+    // Recalculate roughly or just sum items
     // Better to recalculate sum of all items with their individual discounts
     const sumAllItems =
       soundproofingItems.reduce((s, i) => s + calculateItemTotalPDF(i.qty, i.price, i.discount, i.discountType), 0) +
@@ -663,8 +700,7 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
             </p>
             <div className="flex gap-2 mt-3">
               <Button variant="outline" size="sm" onClick={() => {
-                const logoInput = document.getElementById('logoUrlDetails') as HTMLInputElement;
-                exportToPDF(currentOffer, logoInput?.value || user.logo);
+                exportToPDF(currentOffer, user.logo);
               }}>
                 <Icon name="FileDown" size={16} className="mr-1" />
                 PDF
@@ -710,13 +746,44 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
                 </div>
 
                 <div className="flex items-center gap-2 justify-between">
-                  <Label htmlFor="logoUrlDetails" className="text-sm font-medium">Логотип (URL):</Label>
-                  <Input
-                    id="logoUrlDetails"
-                    className="w-48 h-8 bg-background"
-                    placeholder="https://..."
-                    defaultValue={user.logo || ''}
-                  />
+                  <Label htmlFor="logoUrlDetails" className="text-sm font-medium">Логотип:</Label>
+                  <div className="flex items-center gap-2 w-48 justify-end">
+                    {user.logo ? (
+                      <div className="flex items-center gap-2">
+                        <img src={user.logo} alt="Logo" className="h-8 w-auto object-contain bg-white rounded border" />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive"
+                          onClick={() => handleLogoUpdate('')}
+                        >
+                          <Icon name="Trash2" size={14} />
+                        </Button>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted-foreground mr-2">Нет логотипа</span>
+                    )}
+
+                    <div className="relative">
+                      <Input
+                        type="file"
+                        id="logoUpload"
+                        className="hidden"
+                        accept="image/*"
+                        onChange={handleLogoUpload}
+                        disabled={isUploading}
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 px-2"
+                        onClick={() => document.getElementById('logoUpload')?.click()}
+                        disabled={isUploading}
+                      >
+                        {isUploading ? <Icon name="Loader2" size={14} className="animate-spin" /> : <Icon name="Upload" size={14} />}
+                      </Button>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-2 justify-between">
