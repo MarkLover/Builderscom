@@ -107,6 +107,7 @@ model Employee {
   project   Project? @relation(fields: [projectId], references: [id])
   
   tasks     Task[]   @relation("AssignedTasks")
+  commercialOffers CommercialOffer[]
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -199,6 +200,10 @@ model CommercialOffer {
   customerPhone String? // Customer phone number
   discount      Float    @default(0)
   discountType  String   @default("percent") // "percent" | "fixed"
+  planImage     String?  // URL to plan image
+  
+  executorId    Int?
+  executor      Employee? @relation(fields: [executorId], references: [id])
   
   userId    Int
   user      User     @relation(fields: [userId], references: [id])

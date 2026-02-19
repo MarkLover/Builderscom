@@ -12,6 +12,7 @@ import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { CompanyUsersModule } from './company-users/company-users.module';
 import { CompanyExpensesModule } from './company-expenses/company-expenses.module';
 import { ExpenseCategoriesModule } from './expense-categories/expense-categories.module';
+import { UploadModule } from './upload/upload.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { ExpenseCategoriesModule } from './expense-categories/expense-categories
     CompanyUsersModule,
     CompanyExpensesModule,
     ExpenseCategoriesModule,
+    UploadModule,
   ],
   controllers: [AppController],
   providers: [AppService],

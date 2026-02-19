@@ -19,6 +19,8 @@ export class CommercialOffersService {
                 address: dto.address,
                 customerName: dto.customerName,
                 customerPhone: dto.customerPhone,
+                executorId: dto.executorId,
+                planImage: dto.planImage,
                 userId,
             },
             include: {
@@ -98,6 +100,7 @@ export class CommercialOffersService {
                 ...dto,
             },
             include: {
+                executor: true,
                 rooms: {
                     include: {
                         works: true,

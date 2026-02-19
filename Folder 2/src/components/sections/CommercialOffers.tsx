@@ -9,7 +9,9 @@ import { useToast } from '@/hooks/use-toast';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { commercialOffersService, CommercialOffer, Room, Work, Material } from '@/services/commercial-offers.service';
+import { employeesService } from '@/services/employees.service';
 
 interface CommercialOffersProps {
   user: any;
@@ -17,7 +19,9 @@ interface CommercialOffersProps {
 
 export const CommercialOffers = ({ user }: CommercialOffersProps) => {
   const [offers, setOffers] = useState<CommercialOffer[]>([]);
+  const [employees, setEmployees] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isUploading, setIsUploading] = useState(false);
   const [selectedOffer, setSelectedOffer] = useState<number | null>(null);
   const [selectedRoom, setSelectedRoom] = useState<number | null>(null);
   const [isOfferDialogOpen, setIsOfferDialogOpen] = useState(false);
@@ -27,18 +31,22 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
   const [selectedWorkTemplate, setSelectedWorkTemplate] = useState('');
   const { toast } = useToast();
 
-  // Fetch offers on mount
+  // Fetch offers and employees on mount
   useEffect(() => {
-    loadOffers();
+    loadData();
   }, []);
 
-  const loadOffers = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
-      const data = await commercialOffersService.getAll();
-      setOffers(data);
+      const [offersData, employeesData] = await Promise.all([
+        commercialOffersService.getAll(),
+        employeesService.getAll()
+      ]);
+      setOffers(offersData);
+      setEmployees(employeesData);
     } catch (error) {
-      toast({ title: 'Ошибка', description: 'Не удалось загрузить КП', variant: 'destructive' });
+      toast({ title: 'Ошибка', description: 'Не удалось загрузить данные', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
@@ -100,6 +108,22 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
         (form.elements.namedItem('name') as HTMLInputElement).value = '';
         (form.elements.namedItem('price') as HTMLInputElement).value = '';
       }
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, offerId: number) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    const file = e.target.files[0];
+
+    try {
+      setIsUploading(true);
+      const { url } = await commercialOffersService.uploadFile(file);
+      await handleUpdateOffer(offerId, { planImage: url });
+      toast({ title: 'Успешно', description: 'План помещения загружен' });
+    } catch (error) {
+      toast({ title: 'Ошибка', description: 'Не удалось загрузить файл', variant: 'destructive' });
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -331,14 +355,39 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
     doc.setFontSize(14);
     doc.text(`по звукоизоляции помещения № ${offer.id}`, pageWidth - 20, 48, { align: 'right' });
 
-    // Central Image (Placeholder)
-    doc.setFillColor(240, 240, 240);
-    doc.rect(20, 70, pageWidth - 40, 100, 'F');
-    doc.setFont('DejaVuSans', 'normal');
-    doc.setFontSize(12);
-    doc.setTextColor(150);
-    doc.text('Эскиз / План помещения', pageWidth / 2, 120, { align: 'center' });
-    doc.setTextColor(0);
+    // Central Image (Plan)
+    if (offer.planImage) {
+      try {
+        const planResp = await fetch(offer.planImage);
+        const planBuf = await planResp.arrayBuffer();
+        const planBase64 = btoa(new Uint8Array(planBuf).reduce((data, byte) => data + String.fromCharCode(byte), ''));
+        const ext = offer.planImage.split('.').pop()?.toUpperCase();
+        // Simple mapping for common extensions, or let jsPDF guess if passed undefined/null? NO, explicit is safer.
+        // But 'JPG' -> 'JPEG' mapping might be needed.
+        let format = 'JPEG';
+        if (ext === 'PNG') format = 'PNG';
+        if (ext === 'WEBP') format = 'WEBP'; // jsPDF might not support WEBP in all versions, but let's try.
+
+        doc.addImage(planBase64, format as any, 20, 70, pageWidth - 40, 100);
+      } catch (e) {
+        console.error("Failed to load plan image", e);
+        doc.setFillColor(240, 240, 240);
+        doc.rect(20, 70, pageWidth - 40, 100, 'F');
+        doc.setFont('DejaVuSans', 'normal');
+        doc.setFontSize(12);
+        doc.setTextColor(150);
+        doc.text('Эскиз / План помещения (Ошибка загрузки)', pageWidth / 2, 120, { align: 'center' });
+        doc.setTextColor(0);
+      }
+    } else {
+      doc.setFillColor(240, 240, 240);
+      doc.rect(20, 70, pageWidth - 40, 100, 'F');
+      doc.setFont('DejaVuSans', 'normal');
+      doc.setFontSize(12);
+      doc.setTextColor(150);
+      doc.text('Эскиз / План помещения', pageWidth / 2, 120, { align: 'center' });
+      doc.setTextColor(0);
+    }
 
     // Bottom Details
     const startY = 200;
@@ -359,9 +408,15 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
     doc.setFont('DejaVuSans', 'bold');
     doc.text('Исполнитель:', 20, startY + 20);
     doc.setFont('DejaVuSans', 'normal');
-    // Assuming 'user' prop has name, but we might need to pass it or use offer.user (which we don't have fully here).
-    // For now, prompt or generic.
-    doc.text('Валеев Чингиз Ринатович', 60, startY + 20); // Hardcoded from reference or need user name
+
+    let executorName = 'Валеев Чингиз Ринатович';
+    if (offer.executor && offer.executor.name) {
+      executorName = offer.executor.name;
+    } else if (offer.executorId) {
+      const emp = employees.find(e => e.id === offer.executorId);
+      if (emp) executorName = emp.name;
+    }
+    doc.text(executorName, 60, startY + 20);
 
     doc.setFont('DejaVuSans', 'bold');
     doc.text('Дата:', 20, startY + 30);
@@ -608,8 +663,8 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
             </p>
             <div className="flex gap-2 mt-3">
               <Button variant="outline" size="sm" onClick={() => {
-                const logoInput = document.getElementById('logoUrl') as HTMLInputElement;
-                exportToPDF(currentOffer, logoInput?.value);
+                const logoInput = document.getElementById('logoUrlDetails') as HTMLInputElement;
+                exportToPDF(currentOffer, logoInput?.value || user.logo);
               }}>
                 <Icon name="FileDown" size={16} className="mr-1" />
                 PDF
@@ -620,30 +675,81 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
               </Button>
             </div>
             <div className="mt-4 space-y-2">
-              <div className="flex items-center gap-2 justify-end">
-                <Label htmlFor="globalDiscount" className="text-sm">Скидка на смету (%):</Label>
-                <Input
-                  id="globalDiscount"
-                  type="number"
-                  className="w-20 h-8"
-                  placeholder="0"
-                  defaultValue={currentOffer.discount || 0}
-                  onChange={(e) => handleUpdateOffer(currentOffer.id, { discount: Number(e.target.value), discountType: 'percent' })}
-                />
-              </div>
-              <div className="flex items-center gap-2 justify-end">
-                <Label htmlFor="logoUrl" className="text-sm">Логотип (URL):</Label>
-                <Input
-                  id="logoUrl"
-                  className="w-48 h-8"
-                  placeholder="https://..."
-                  onChange={(e) => {
-                    // Assuming we just pass it to exportToPDF or store it.
-                    // For now, let's just use it in exportToPDF by adding a local state or ref, or pass it directly if we had a button here.
-                    // But exportToPDF is called above.
-                    // Let's change the exportToPDF button to use a state value.
-                  }}
-                />
+              <div className="mt-4 space-y-3 p-4 bg-muted/50 rounded-lg border">
+                <div className="flex items-center gap-2 justify-between">
+                  <Label htmlFor="globalDiscount" className="text-sm font-medium">Скидка на смету (%):</Label>
+                  <Input
+                    id="globalDiscount"
+                    type="number"
+                    className="w-32 h-8 bg-background"
+                    placeholder="0"
+                    defaultValue={currentOffer.discount || 0}
+                    onChange={(e) => handleUpdateOffer(currentOffer.id, { discount: Number(e.target.value), discountType: 'percent' })}
+                  />
+                </div>
+
+                <div className="flex items-center gap-2 justify-between">
+                  <Label className="text-sm font-medium">Исполнитель:</Label>
+                  <div className="w-48">
+                    <Select
+                      value={currentOffer.executorId?.toString()}
+                      onValueChange={(val) => handleUpdateOffer(currentOffer.id, { executorId: Number(val) })}
+                    >
+                      <SelectTrigger className="h-8 bg-background w-full">
+                        <SelectValue placeholder="Выберите..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {employees.map((emp: any) => (
+                          <SelectItem key={emp.id} value={emp.id.toString()}>
+                            {emp.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 justify-between">
+                  <Label htmlFor="logoUrlDetails" className="text-sm font-medium">Логотип (URL):</Label>
+                  <Input
+                    id="logoUrlDetails"
+                    className="w-48 h-8 bg-background"
+                    placeholder="https://..."
+                    defaultValue={user.logo || ''}
+                  />
+                </div>
+
+                <div className="flex items-center gap-2 justify-between">
+                  <Label className="text-sm font-medium">План помещения:</Label>
+                  <div className="flex items-center gap-2 w-48 justify-end">
+                    {currentOffer.planImage && (
+                      <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                        <a href={currentOffer.planImage} target="_blank" rel="noopener noreferrer">
+                          <Icon name="Eye" size={14} />
+                        </a>
+                      </Button>
+                    )}
+                    <div className="relative">
+                      <Input
+                        type="file"
+                        id="planImageUpload"
+                        className="hidden"
+                        onChange={(e) => handleFileUpload(e, currentOffer.id)}
+                        disabled={isUploading}
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8"
+                        onClick={() => document.getElementById('planImageUpload')?.click()}
+                        disabled={isUploading}
+                      >
+                        {isUploading ? <Icon name="Loader2" size={14} className="animate-spin" /> : <Icon name="Upload" size={14} />}
+                        <span className="ml-2">Загрузить</span>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

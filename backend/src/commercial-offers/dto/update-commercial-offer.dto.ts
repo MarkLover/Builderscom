@@ -4,4 +4,6 @@ export class UpdateCommercialOfferDto {
     customerPhone?: string;
     discount?: number;
     discountType?: string; // "percent" | "fixed"
+    executorId?: number;
+    planImage?: string;
 }

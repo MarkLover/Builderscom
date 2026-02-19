@@ -7,6 +7,9 @@ export interface CommercialOffer {
     customerPhone?: string;
     discount?: number;
     discountType?: string;
+    planImage?: string;
+    executorId?: number;
+    executor?: { id: number; name: string; };
     createdAt: string;
     updatedAt: string;
     rooms: Room[];
@@ -45,6 +48,8 @@ export interface CreateOfferDto {
     address: string;
     customerName?: string;
     customerPhone?: string;
+    executorId?: number;
+    planImage?: string;
 }
 
 export interface CreateRoomDto {
@@ -134,6 +139,17 @@ export const commercialOffersService = {
 
     updateMaterial: async (materialId: number, data: Partial<CreateMaterialDto> & { discount?: number, discountType?: string }): Promise<Material> => {
         const response = await api.patch(`/commercial-offers/materials/${materialId}`, data);
+        return response.data;
+    },
+
+    uploadFile: async (file: File): Promise<{ url: string }> => {
+        const formData = new FormData();
+        formData.append('file', file);
+        const response = await api.post('/upload', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
         return response.data;
     },
 };
