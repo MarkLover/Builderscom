@@ -20,6 +20,7 @@ interface Transaction {
     category: string;
     description: string;
     date: string;
+    stageId?: number | null;
 }
 
 interface Stage {
@@ -140,17 +141,7 @@ const ProjectDetail = () => {
             }
         });
 
-        proj.stages?.forEach(stage => {
-            stage.transactions?.forEach((t: Transaction) => {
-                if (t.type === 'expense') {
-                    if (t.category === 'materials') materials += t.amount;
-                    else if (t.category === 'labor') labor += t.amount;
-                    else other += t.amount;
-                } else {
-                    income += t.amount;
-                }
-            });
-        });
+        // proj.stages loop removed to avoid double counting as proj.transactions includes all project transactions
 
         return { spent: materials + labor + other, income, materials, labor, other };
     };
@@ -347,9 +338,11 @@ const ProjectDetail = () => {
                         </div>
                     </CardHeader>
                     <CardContent className="space-y-2">
-                        {project.transactions.map((t: Transaction) => (
-                            <TransactionRow key={t.id} transaction={t} />
-                        ))}
+                        {project.transactions
+                            .filter((t: Transaction) => !t.stageId)
+                            .map((t: Transaction) => (
+                                <TransactionRow key={t.id} transaction={t} />
+                            ))}
                     </CardContent>
                 </Card>
             )}
