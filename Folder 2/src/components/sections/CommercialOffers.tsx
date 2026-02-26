@@ -30,6 +30,7 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
   const [isWorkDialogOpen, setIsWorkDialogOpen] = useState(false);
   const [isMaterialDialogOpen, setIsMaterialDialogOpen] = useState(false);
   const [selectedWorkTemplate, setSelectedWorkTemplate] = useState('');
+  const debounceRef = React.useRef<NodeJS.Timeout>();
   const { toast } = useToast();
 
   // Fetch offers and employees on mount
@@ -194,6 +195,13 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
     } catch (error) {
       toast({ title: 'Ошибка', description: 'Не удалось обновить КП', variant: 'destructive' });
     }
+  };
+
+  const handleDebouncedDiscountUpdate = (offerId: number, discount: number) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      handleUpdateOffer(offerId, { discount, discountType: 'percent' });
+    }, 500);
   };
 
   const handleAddRoom = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -757,7 +765,7 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
                     className="w-32 h-8 bg-background"
                     placeholder="0"
                     defaultValue={currentOffer.discount || 0}
-                    onChange={(e) => handleUpdateOffer(currentOffer.id, { discount: Number(e.target.value), discountType: 'percent' })}
+                    onChange={(e) => handleDebouncedDiscountUpdate(currentOffer.id, Number(e.target.value))}
                   />
                 </div>
 
