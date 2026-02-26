@@ -58,4 +58,51 @@ export class AuthService {
             user: user,
         };
     }
+
+    async telegramAuth(data: any): Promise<any> {
+        const botToken = process.env.TELEGRAM_BOT_TOKEN || '8456138898:AAELmmV170xWOJ12zkj9xfkn8-MM9nA0u_U';
+
+        // 1. Validate hash
+        const { hash, ...authData } = data;
+        const checkString = Object.keys(authData)
+            .sort()
+            .map(k => `${k}=${authData[k]}`)
+            .join('\n');
+
+        const crypto = require('crypto');
+        const secretKey = crypto.createHash('sha256').update(botToken).digest();
+        const hmac = crypto.createHmac('sha256', secretKey).update(checkString).digest('hex');
+
+        if (hmac !== hash) {
+            throw new UnauthorizedException('Invalid Telegram authentication hash');
+        }
+
+        // 2. Auth date check to prevent replay attacks (1 hour)
+        const now = Math.floor(Date.now() / 1000);
+        if (now - authData.auth_date > 3600) {
+            throw new UnauthorizedException('Telegram auth data is outdated');
+        }
+
+        // 3. Find or Create user
+        const fakePhone = `tg_${authData.id}`;
+        let user = await this.usersService.findByPhone(fakePhone);
+
+        if (!user) {
+            // Register new user
+            const randomPassword = crypto.randomBytes(16).toString('hex');
+            const newUserData = {
+                name: authData.first_name + (authData.last_name ? ` ${authData.last_name}` : ''),
+                phone: fakePhone,
+                password: randomPassword,
+                company: 'Telegram User', // Default
+            };
+            user = await this.usersService.create(newUserData);
+        }
+
+        // Remove password for security
+        const { password, ...result } = user;
+        const finalUser = { ...result, userType: 'owner' };
+
+        return this.login(finalUser);
+    }
 }

@@ -21,6 +21,7 @@ interface Transaction {
     description: string;
     date: string;
     stageId?: number | null;
+    receipt?: string | null;
 }
 
 interface Stage {
@@ -157,7 +158,7 @@ const ProjectDetail = () => {
         createStageMutation.mutate({ title, budget });
     };
 
-    const handleAddTransaction = (e: React.FormEvent<HTMLFormElement>) => {
+    const handleAddTransaction = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         const formData = new FormData(e.currentTarget);
         const type = formData.get('type') as string;
@@ -167,12 +168,26 @@ const ProjectDetail = () => {
             : 'other';
         const description = formData.get('description') as string;
 
+        const receiptFile = formData.get('receipt') as File;
+        let receiptUrl = undefined;
+
+        if (receiptFile && receiptFile.size > 0) {
+            try {
+                const uploadRes = await projectsService.uploadReceipt(receiptFile);
+                receiptUrl = uploadRes.url;
+            } catch (error) {
+                toast({ title: 'Ошибка', description: 'Не удалось загрузить чек', variant: 'destructive' });
+                return;
+            }
+        }
+
         createTransactionMutation.mutate({
             type,
             amount,
             category,
             description,
-            stageId: selectedStageId
+            stageId: selectedStageId,
+            receipt: receiptUrl
         });
     };
 
@@ -181,18 +196,33 @@ const ProjectDetail = () => {
         setIsEditDialogOpen(true);
     };
 
-    const handleEditSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    const handleEditSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (!editingTransaction) return;
 
         const formData = new FormData(e.currentTarget);
+
+        const receiptFile = formData.get('receipt') as File;
+        let receiptUrl = editingTransaction.receipt;
+
+        if (receiptFile && receiptFile.size > 0) {
+            try {
+                const uploadRes = await projectsService.uploadReceipt(receiptFile);
+                receiptUrl = uploadRes.url;
+            } catch (error) {
+                toast({ title: 'Ошибка', description: 'Не удалось загрузить чек', variant: 'destructive' });
+                return;
+            }
+        }
+
         updateTransactionMutation.mutate({
             transactionId: editingTransaction.id,
             data: {
                 type: formData.get('type') as string,
                 amount: parseFloat(formData.get('amount') as string) || 0,
                 category: formData.get('category') as string,
-                description: formData.get('description') as string
+                description: formData.get('description') as string,
+                receipt: receiptUrl
             }
         });
     };
@@ -231,7 +261,14 @@ const ProjectDetail = () => {
     const TransactionRow = ({ transaction }: { transaction: Transaction }) => (
         <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg group hover:bg-muted transition-colors">
             <div>
-                <p className="font-medium">{transaction.description}</p>
+                <div className="flex items-center gap-2">
+                    <p className="font-medium">{transaction.description}</p>
+                    {transaction.receipt && (
+                        <a href={transaction.receipt} target="_blank" rel="noreferrer" title="Посмотреть чек" className="text-primary hover:text-primary/80">
+                            <Icon name="FileText" size={16} />
+                        </a>
+                    )}
+                </div>
                 <p className="text-xs text-muted-foreground">
                     {getCategoryLabel(transaction.category)}
                     {' • '}
@@ -485,6 +522,10 @@ const ProjectDetail = () => {
                             <Label htmlFor="description">Описание</Label>
                             <Input id="description" name="description" placeholder="Покупка цемента" required />
                         </div>
+                        <div>
+                            <Label htmlFor="receipt">Чек / Документ (опционально)</Label>
+                            <Input id="receipt" name="receipt" type="file" accept="image/*,.pdf" />
+                        </div>
                         <Button type="submit" className="w-full" disabled={createTransactionMutation.isPending}>
                             {createTransactionMutation.isPending ? 'Добавление...' : 'Добавить'}
                         </Button>
@@ -542,6 +583,17 @@ const ProjectDetail = () => {
                                     defaultValue={editingTransaction.description}
                                     required
                                 />
+                            </div>
+                            <div>
+                                <Label htmlFor="edit-receipt">Изменить чек / документ</Label>
+                                <Input id="edit-receipt" name="receipt" type="file" accept="image/*,.pdf" />
+                                {editingTransaction.receipt && (
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                        <a href={editingTransaction.receipt} target="_blank" rel="noreferrer" className="text-primary hover:underline">
+                                            Текущий файл
+                                        </a>
+                                    </p>
+                                )}
                             </div>
                             <div className="flex gap-2">
                                 <Button type="submit" className="flex-1" disabled={updateTransactionMutation.isPending}>

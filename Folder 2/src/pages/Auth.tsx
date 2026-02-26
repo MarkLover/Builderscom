@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Icon from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,34 @@ const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const telegramWrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    (window as any).onTelegramAuth = async (user: any) => {
+      try {
+        await authService.telegramLogin(user);
+        toast({ title: 'Вход выполнен', description: `Добро пожаловать, ${user.first_name || ''}!` });
+        navigate('/');
+      } catch (error) {
+        toast({
+          title: 'Ошибка',
+          description: 'Не удалось войти через Telegram.',
+          variant: 'destructive',
+        });
+      }
+    };
+
+    if (telegramWrapperRef.current && telegramWrapperRef.current.children.length === 0) {
+      const script = document.createElement('script');
+      script.src = 'https://telegram.org/js/telegram-widget.js?22';
+      script.setAttribute('data-telegram-login', 'JustBuilders_bot');
+      script.setAttribute('data-size', 'large');
+      script.setAttribute('data-onauth', 'onTelegramAuth(user)');
+      script.setAttribute('data-request-access', 'write');
+      script.async = true;
+      telegramWrapperRef.current.appendChild(script);
+    }
+  }, [navigate, toast]);
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -67,7 +95,7 @@ const Auth = () => {
 
       await authService.register(userData);
 
-      const loginData = await authService.login({ phone: userData.phone, password: userData.password });
+      await authService.login({ phone: userData.phone, password: userData.password });
       navigate('/');
 
       toast({ title: 'Регистрация успешна', description: `Добро пожаловать!` });
@@ -137,6 +165,19 @@ const Auth = () => {
                 >
                   Нет аккаунта? Зарегистрируйтесь
                 </button>
+              </div>
+
+              <div className="relative my-4">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">Или войти через</span>
+                </div>
+              </div>
+
+              <div className="flex justify-center mt-4">
+                <div ref={isLogin ? telegramWrapperRef : null}></div>
               </div>
             </form>
           ) : (
@@ -289,6 +330,19 @@ const Auth = () => {
                 >
                   Уже есть аккаунт? Войдите
                 </button>
+              </div>
+
+              <div className="relative my-4">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">Или войти через</span>
+                </div>
+              </div>
+
+              <div className="flex justify-center mt-4">
+                <div ref={!isLogin ? telegramWrapperRef : null}></div>
               </div>
             </form>
           )}

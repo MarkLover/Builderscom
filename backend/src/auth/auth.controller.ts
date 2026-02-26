@@ -18,6 +18,11 @@ export class AuthController {
         return this.authService.login(req.user);
     }
 
+    @Post('telegram')
+    async telegramLogin(@Body() data: any) {
+        return this.authService.telegramAuth(data);
+    }
+
     @Post('register')
     async register(@Body() createUserDto: CreateUserDto) {
         try {

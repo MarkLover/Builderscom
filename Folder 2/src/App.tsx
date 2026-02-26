@@ -36,7 +36,13 @@ const App = () => (
           }} />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/" element={<Layout />}>
-            <Route index element={<Index />} />
+            <Route index element={localStorage.getItem('token') ? <Index /> : <Landing onGetStarted={() => {
+              if (localStorage.getItem('token')) {
+                window.location.href = '/';
+              } else {
+                window.location.href = '/auth';
+              }
+            }} />} />
             <Route path="dashboard" element={<Index />} />
             <Route path="projects" element={<Projects />} />
             <Route path="projects/:id" element={<ProjectDetail />} />

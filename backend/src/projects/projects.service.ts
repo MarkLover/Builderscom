@@ -109,6 +109,7 @@ export class ProjectsService {
         if (dto.category) updateData.category = dto.category;
         if (dto.description !== undefined) updateData.description = dto.description;
         if (dto.date) updateData.date = new Date(dto.date);
+        if (dto.receipt !== undefined) updateData.receipt = dto.receipt;
 
         return this.prisma.transaction.update({
             where: { id: transactionId },

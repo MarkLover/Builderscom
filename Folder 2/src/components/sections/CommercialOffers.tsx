@@ -347,9 +347,18 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
 
       if (logoUrl) {
         try {
-          const logoResp = await fetch(logoUrl);
-          const logoBuf = await logoResp.arrayBuffer();
-          logoBase64 = toBase64(logoBuf);
+          // Function to convert image URL to base64 using canvas to avoid some CORS issues if it's cached or on same domain
+          const getBase64FromUrl = async (url: string) => {
+            const data = await fetch(url, { mode: 'cors', cache: 'no-cache' });
+            const blob = await data.blob();
+            return new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.readAsDataURL(blob);
+              reader.onloadend = () => resolve(reader.result as string);
+              reader.onerror = reject;
+            });
+          }
+          logoBase64 = await getBase64FromUrl(logoUrl);
         } catch (e) {
           console.error("Failed to load logo", e);
         }
@@ -373,8 +382,10 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
     // Logo
     if (logoBase64) {
       try {
-        // Basic extension detection or default to PNG. jsPDF handles standard types.
-        doc.addImage(logoBase64, 'PNG', 20, 20, 50, 20, undefined, 'FAST');
+        // Strip data prefix like 'data:image/png;base64,' for jsPDF
+        const base64Data = logoBase64.split(',')[1] || logoBase64;
+        const ext = logoBase64.includes('png') ? 'PNG' : 'JPEG';
+        doc.addImage(base64Data, ext, 20, 20, 50, 20, undefined, 'FAST');
       } catch (e) {
         console.error("Failed to add logo to PDF", e);
       }
@@ -392,7 +403,7 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
     doc.setFontSize(16);
     doc.text('Коммерческое предложение', pageWidth - 20, 40, { align: 'right' });
     doc.setFontSize(14);
-    doc.text(`по звукоизоляции помещения № ${offer.id}`, pageWidth - 20, 48, { align: 'right' });
+    doc.text(`№ ${offer.id}`, pageWidth - 20, 48, { align: 'right' });
 
     // Central Image (Plan)
     if (offer.planImage) {
@@ -472,29 +483,6 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
     doc.text('Смета работ и материалов', 14, yPosition);
     yPosition += 15;
 
-    // Categorize
-    const categorizeItem = (name: string): 'soundproofing' | 'materials' | 'services' => {
-      const lowerName = name.toLowerCase();
-      if (lowerName.includes('звук') || lowerName.includes('шум')) return 'soundproofing';
-      return 'materials';
-    };
-
-    const soundproofingItems: Array<{ name: string, qty: number, unit: string, price: number, discount: number, discountType: string }> = [];
-    const materialItems: Array<{ name: string, qty: number, unit: string, price: number, discount: number, discountType: string }> = [];
-    const serviceItems: Array<{ name: string, qty: number, unit: string, price: number, discount: number, discountType: string }> = [];
-
-    offer.rooms.forEach(room => {
-      room.materials.forEach(m => {
-        const category = categorizeItem(m.name);
-        const item = { name: m.name, qty: m.quantity, unit: m.unit, price: m.price, discount: m.discount || 0, discountType: m.discountType || 'percent' };
-        if (category === 'soundproofing') soundproofingItems.push(item);
-        else materialItems.push(item);
-      });
-      room.works.forEach(w => {
-        serviceItems.push({ name: w.name, qty: w.quantity, unit: w.unit, price: w.price, discount: w.discount || 0, discountType: w.discountType || 'percent' });
-      });
-    });
-
     const calculateItemTotalPDF = (qty: number, price: number, discount: number, discountType: string) => {
       let total = qty * price;
       if (discount) {
@@ -507,17 +495,17 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
       return total;
     }
 
-    const renderCategory = (title: string, items: typeof soundproofingItems, color: [number, number, number]) => {
-      if (items.length === 0) return;
+    const renderRoomCategory = (title: string, items: Array<{ name: string, qty: number, unit: string, price: number, discount: number, discountType: string }>, color: [number, number, number]) => {
+      if (items.length === 0) return 0;
 
       if (yPosition > 250) {
         doc.addPage();
         yPosition = 20;
       }
 
-      doc.setFontSize(12);
+      doc.setFontSize(11);
       doc.setFont('DejaVuSans', 'bold');
-      doc.setTextColor(0);
+      doc.setTextColor(50);
       doc.text(title, 14, yPosition);
       yPosition += 5;
 
@@ -551,13 +539,47 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
       const categoryTotal = items.reduce((sum, item) => sum + calculateItemTotalPDF(item.qty, item.price, item.discount, item.discountType), 0);
       doc.setFontSize(10);
       doc.setFont('DejaVuSans', 'bold');
-      doc.text(`Итого по разделу: ${categoryTotal.toLocaleString('ru-RU', { minimumFractionDigits: 2 })} ₽`, 14, yPosition);
+      doc.setTextColor(0);
+      doc.text(`Итого: ${categoryTotal.toLocaleString('ru-RU', { minimumFractionDigits: 2 })} ₽`, 14, yPosition);
       yPosition += 10;
+
+      return categoryTotal;
     };
 
-    renderCategory('Звукоизоляционные материалы', soundproofingItems, [100, 120, 200]);
-    renderCategory('Общестроительные материалы', materialItems, [34, 197, 94]);
-    renderCategory('Услуги', serviceItems, [79, 70, 229]);
+    let sumAllItems = 0;
+
+    offer.rooms.forEach(room => {
+      if (yPosition > 240) {
+        doc.addPage();
+        yPosition = 20;
+      }
+
+      doc.setFontSize(13);
+      doc.setFont('DejaVuSans', 'bold');
+      doc.setTextColor(0);
+      doc.text(`Помещение: ${room.name}`, 14, yPosition);
+      yPosition += 8;
+
+      const materialItems = room.materials.map(m => ({
+        name: m.name, qty: m.quantity, unit: m.unit, price: m.price, discount: m.discount || 0, discountType: m.discountType || 'percent'
+      }));
+
+      const serviceItems = room.works.map(w => ({
+        name: w.name, qty: w.quantity, unit: w.unit, price: w.price, discount: w.discount || 0, discountType: w.discountType || 'percent'
+      }));
+
+      let roomTotal = 0;
+      roomTotal += renderRoomCategory('Материалы', materialItems, [34, 197, 94]);
+      roomTotal += renderRoomCategory('Работы', serviceItems, [79, 70, 229]);
+
+      sumAllItems += roomTotal;
+
+      doc.setFontSize(11);
+      doc.setFont('DejaVuSans', 'bold');
+      doc.setTextColor(0);
+      doc.text(`Итого по помещению '${room.name}': ${roomTotal.toLocaleString('ru-RU', { minimumFractionDigits: 2 })} ₽`, 14, yPosition);
+      yPosition += 15;
+    });
 
     // Grand Total
     if (yPosition > 240) {
@@ -567,14 +589,7 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
 
     yPosition += 10;
     doc.setFontSize(12);
-    // Recalculate roughly or just sum items
-    // Better to recalculate sum of all items with their individual discounts
-    const sumAllItems =
-      soundproofingItems.reduce((s, i) => s + calculateItemTotalPDF(i.qty, i.price, i.discount, i.discountType), 0) +
-      materialItems.reduce((s, i) => s + calculateItemTotalPDF(i.qty, i.price, i.discount, i.discountType), 0) +
-      serviceItems.reduce((s, i) => s + calculateItemTotalPDF(i.qty, i.price, i.discount, i.discountType), 0);
-
-    doc.text(`Сумма: ${sumAllItems.toLocaleString('ru-RU', { minimumFractionDigits: 2 })} ₽`, 14, yPosition);
+    doc.setTextColor(0);
     yPosition += 7;
 
     if (offer.discount) {
@@ -607,61 +622,81 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
     }
     summaryData.push(['Дата:', formatDate(offer.createdAt)]);
 
-    // Categorize items
-    const categorizeItem = (name: string): 'soundproofing' | 'materials' | 'services' => {
-      const lowerName = name.toLowerCase();
-      if (lowerName.includes('звук') || lowerName.includes('шум')) return 'soundproofing';
-      return 'materials';
-    };
+    // Categorize items by room
+    const calculateItemTotalExcel = (qty: number, price: number, discount: number, discountType: string) => {
+      let total = qty * price;
+      if (discount) {
+        if (discountType === 'percent') {
+          total = total * (1 - discount / 100);
+        } else {
+          total = total - discount;
+        }
+      }
+      return total;
+    }
 
-    const soundproofingItems: Array<{ name: string, qty: number, unit: string, price: number }> = [];
-    const materialItems: Array<{ name: string, qty: number, unit: string, price: number }> = [];
-    const serviceItems: Array<{ name: string, qty: number, unit: string, price: number }> = [];
-
-    offer.rooms.forEach(room => {
-      room.materials.forEach(m => {
-        const category = categorizeItem(m.name);
-        const item = { name: m.name, qty: m.quantity, unit: m.unit, price: m.price };
-        if (category === 'soundproofing') soundproofingItems.push(item);
-        else materialItems.push(item);
-      });
-      room.works.forEach(w => {
-        serviceItems.push({ name: w.name, qty: w.quantity, unit: w.unit, price: w.price });
-      });
-    });
-
-    // Add categories to summary
-    const addCategoryToSummary = (title: string, items: typeof soundproofingItems) => {
-      if (items.length === 0) return;
+    const addCategoryToSummary = (title: string, items: Array<{ name: string, qty: number, unit: string, price: number, discount: number, discountType: string }>) => {
+      if (items.length === 0) return 0;
 
       summaryData.push([]);
       summaryData.push([title]);
-      summaryData.push(['Наименование', 'Кол-во', 'Ед.', 'Цена, ₽', 'Стоимость, ₽']);
+      summaryData.push(['Наименование', 'Кол-во', 'Ед.', 'Цена, ₽', 'Скидка', 'Стоимость, ₽']);
 
+      let categoryTotal = 0;
       items.forEach(item => {
+        const total = calculateItemTotalExcel(item.qty, item.price, item.discount, item.discountType);
+        categoryTotal += total;
+        let discountText = '-';
+        if (item.discount) {
+          discountText = item.discountType === 'percent' ? `${item.discount}%` : `${item.discount} ₽`;
+        }
+
         summaryData.push([
           item.name,
           item.qty,
           item.unit,
           item.price.toFixed(2),
-          (item.qty * item.price).toFixed(2)
+          discountText,
+          total.toFixed(2)
         ]);
       });
 
-      const categoryTotal = items.reduce((sum, item) => sum + (item.qty * item.price), 0);
-      summaryData.push(['', '', '', 'Итого:', categoryTotal.toFixed(2)]);
-      summaryData.push(['', '', '', 'Размер скидки: 10%', '']);
-      const withMargin = categoryTotal * 1.1;
-      summaryData.push(['', '', '', 'Итого со скидкой:', withMargin.toFixed(2)]);
+      summaryData.push(['', '', '', '', 'Итого:', categoryTotal.toFixed(2)]);
+      return categoryTotal;
     };
 
-    addCategoryToSummary('ЗВУКОИЗОЛЯЦИОННЫЕ МАТЕРИАЛЫ', soundproofingItems);
-    addCategoryToSummary('ОБЩЕСТРОИТЕЛЬНЫЕ МАТЕРИАЛЫ', materialItems);
-    addCategoryToSummary('УСЛУГИ', serviceItems);
+    offer.rooms.forEach(room => {
+      summaryData.push([]);
+      summaryData.push([`ПОМЕЩЕНИЕ: ${room.name.toUpperCase()}`]);
+
+      const materialItems = room.materials.map(m => ({
+        name: m.name, qty: m.quantity, unit: m.unit, price: m.price, discount: m.discount || 0, discountType: m.discountType || 'percent'
+      }));
+
+      const serviceItems = room.works.map(w => ({
+        name: w.name, qty: w.quantity, unit: w.unit, price: w.price, discount: w.discount || 0, discountType: w.discountType || 'percent'
+      }));
+
+      let roomTotal = 0;
+      roomTotal += addCategoryToSummary('МАТЕРИАЛЫ', materialItems);
+      roomTotal += addCategoryToSummary('РАБОТЫ', serviceItems);
+
+      summaryData.push(['', '', '', '', `Итого по помещению '${room.name}':`, roomTotal.toFixed(2)]);
+    });
 
     summaryData.push([]);
-    const grandTotal = calculateOfferTotal(offer) * 1.1;
-    summaryData.push(['ИТОГОВАЯ СТОИМОСТЬ:', '', '', '', grandTotal.toFixed(2)]);
+
+    // Total without general discount
+    const subtotal = offer.rooms.reduce((sum, room) => sum + calculateRoomTotal(room), 0);
+    summaryData.push(['СУММА:', '', '', '', '', subtotal.toFixed(2)]);
+
+    if (offer.discount) {
+      const discountStr = offer.discountType === 'percent' ? `${offer.discount}%` : `${offer.discount} ₽`;
+      summaryData.push(['СКИДКА НА СМЕТУ:', '', '', '', '', discountStr]);
+    }
+
+    const grandTotal = calculateOfferTotal(offer);
+    summaryData.push(['ИТОГОВАЯ СТОИМОСТЬ:', '', '', '', '', grandTotal.toFixed(2)]);
 
     const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
     XLSX.utils.book_append_sheet(workbook, summarySheet, 'Сводка');

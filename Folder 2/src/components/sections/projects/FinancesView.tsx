@@ -117,30 +117,39 @@ export const FinancesView = (props: FinancesViewProps) => {
         </div>
       </div>
 
-      <CompanyFinancesCard
-        companyExpenses={companyExpenses}
-        expenseCategories={expenseCategories}
-      />
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+        {/* Top Full Width */}
+        <div className="xl:col-span-12">
+          <CompanyFinancesCard
+            companyExpenses={companyExpenses}
+            expenseCategories={expenseCategories}
+          />
+        </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <ProjectStageExpenses project={project} />
-        <ExpenseDistribution project={project} />
+        {/* Project Specific Info */}
+        <div className="xl:col-span-6 space-y-6">
+          <ProjectStageExpenses project={project} />
+          <ExpenseDistribution project={project} />
+        </div>
+
+        {/* Company Wide Info */}
+        <div className="xl:col-span-6 space-y-6">
+          <CompanyExpensesCard
+            companyExpenses={companyExpenses}
+            isCompanyExpenseDialogOpen={isCompanyExpenseDialogOpen}
+            setIsCompanyExpenseDialogOpen={setIsCompanyExpenseDialogOpen}
+            handleAddCompanyExpense={handleAddCompanyExpense}
+          />
+
+          <ExpenseCategoriesCard
+            expenseCategories={expenseCategories}
+            isExpenseCategoryDialogOpen={isExpenseCategoryDialogOpen}
+            setIsExpenseCategoryDialogOpen={setIsExpenseCategoryDialogOpen}
+            setViewingCategory={setViewingCategory}
+            handleAddExpenseCategory={handleAddExpenseCategory}
+          />
+        </div>
       </div>
-
-      <CompanyExpensesCard
-        companyExpenses={companyExpenses}
-        isCompanyExpenseDialogOpen={isCompanyExpenseDialogOpen}
-        setIsCompanyExpenseDialogOpen={setIsCompanyExpenseDialogOpen}
-        handleAddCompanyExpense={handleAddCompanyExpense}
-      />
-
-      <ExpenseCategoriesCard
-        expenseCategories={expenseCategories}
-        isExpenseCategoryDialogOpen={isExpenseCategoryDialogOpen}
-        setIsExpenseCategoryDialogOpen={setIsExpenseCategoryDialogOpen}
-        setViewingCategory={setViewingCategory}
-        handleAddExpenseCategory={handleAddExpenseCategory}
-      />
     </div>
   );
 };

@@ -67,16 +67,6 @@ export const AppHeader = () => {
           </div>
 
           <nav className="flex gap-1 items-center flex-wrap">
-            {/* Dev Link */}
-            <Button
-              variant={isActive('/landing') ? 'default' : 'ghost'}
-              onClick={() => navigate('/landing')}
-              className="max-md:flex-row-reverse"
-            >
-              <Icon name="Map" size={18} className="md:mr-2" />
-              <span className="max-md:hidden">Дорожная Карта Dev</span>
-            </Button>
-
             {hasPermission('dashboard') && (
               <Button
                 variant={isActive('/') ? 'default' : 'ghost'}

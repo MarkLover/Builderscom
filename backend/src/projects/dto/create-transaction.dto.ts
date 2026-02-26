@@ -5,4 +5,5 @@ export class CreateTransactionDto {
     description: string;
     date?: string; // ISO string
     stageId?: number; // Optional link to stage
+    receipt?: string; // Optional link to receipt
 }
