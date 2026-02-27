@@ -33,7 +33,13 @@ const Employees = () => {
     const { toast } = useToast();
     const queryClient = useQueryClient();
     const [isEmployeeDialogOpen, setIsEmployeeDialogOpen] = useState(false);
+    const [showPaywall, setShowPaywall] = useState(false);
     const [showArchivedEmployees, setShowArchivedEmployees] = useState(false);
+
+    // Get user from localStorage
+    const userStr = localStorage.getItem('user');
+    const user = userStr ? JSON.parse(userStr) : null;
+    const isFreeUser = user && !user.subscriptionActive;
 
     // Fetch employees from API
     const { data: employees = [], isLoading } = useQuery({
@@ -103,48 +109,73 @@ const Employees = () => {
                         {showArchivedEmployees ? 'Активные' : 'Архив'}
                     </Button>
                 </div>
-                <Dialog open={isEmployeeDialogOpen} onOpenChange={setIsEmployeeDialogOpen}>
-                    <DialogTrigger asChild>
-                        <Button>
-                            <Icon name="UserPlus" size={18} className="mr-2" />
-                            Добавить
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Добавить сотрудника</DialogTitle>
-                        </DialogHeader>
-                        <form onSubmit={handleAddEmployee} className="space-y-4">
-                            <div>
-                                <Label htmlFor="empName">ФИО</Label>
-                                <Input id="empName" name="name" placeholder="Иван Иванов" required />
-                            </div>
-                            <div>
-                                <Label htmlFor="role">Должность</Label>
-                                <Input id="role" name="role" placeholder="Прораб" required />
-                            </div>
-                            <div>
-                                <Label htmlFor="phone">Телефон</Label>
-                                <Input id="phone" name="phone" type="tel" placeholder="+7 (999) 123-45-67" />
-                            </div>
-                            <div>
-                                <Label htmlFor="telegram">Telegram</Label>
-                                <Input id="telegram" name="telegram" placeholder="@username" />
-                            </div>
-                            <div>
-                                <Label htmlFor="whatsapp">WhatsApp</Label>
-                                <Input id="whatsapp" name="whatsapp" type="tel" placeholder="+79991234567" />
-                            </div>
-                            <div>
-                                <Label htmlFor="max">MAX</Label>
-                                <Input id="max" name="max" placeholder="@max_username" />
-                            </div>
-                            <Button type="submit" className="w-full" disabled={createMutation.isPending}>
-                                {createMutation.isPending ? 'Добавление...' : 'Добавить сотрудника'}
+                {isFreeUser && displayedEmployees.length >= 10 ? (
+                    <Dialog open={showPaywall} onOpenChange={setShowPaywall}>
+                        <DialogTrigger asChild>
+                            <Button>
+                                <Icon name="Lock" size={18} className="mr-2" />
+                                Добавить
                             </Button>
-                        </form>
-                    </DialogContent>
-                </Dialog>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Превышен лимит сотрудников</DialogTitle>
+                                <p className="text-sm text-muted-foreground mt-2">
+                                    В бесплатной версии вы можете добавить до 10 сотрудников.
+                                </p>
+                            </DialogHeader>
+                            <div className="space-y-4 pt-4">
+                                <p className="text-sm font-medium">Оформите подписку, чтобы добавить неограниченное количество сотрудников.</p>
+                                <Button className="w-full" onClick={() => window.location.href = '/profile'}>
+                                    {user?.hasUsedTrial ? 'Перейти на платный (10 ₽ - ТЕСТ)' : 'Попробовать 7 дней за 1 ₽'}
+                                </Button>
+                            </div>
+                        </DialogContent>
+                    </Dialog>
+                ) : (
+                    <Dialog open={isEmployeeDialogOpen} onOpenChange={setIsEmployeeDialogOpen}>
+                        <DialogTrigger asChild>
+                            <Button>
+                                <Icon name="UserPlus" size={18} className="mr-2" />
+                                Добавить
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Добавить сотрудника</DialogTitle>
+                            </DialogHeader>
+                            <form onSubmit={handleAddEmployee} className="space-y-4">
+                                <div>
+                                    <Label htmlFor="empName">ФИО</Label>
+                                    <Input id="empName" name="name" placeholder="Иван Иванов" required />
+                                </div>
+                                <div>
+                                    <Label htmlFor="role">Должность</Label>
+                                    <Input id="role" name="role" placeholder="Прораб" required />
+                                </div>
+                                <div>
+                                    <Label htmlFor="phone">Телефон</Label>
+                                    <Input id="phone" name="phone" type="tel" placeholder="+7 (999) 123-45-67" />
+                                </div>
+                                <div>
+                                    <Label htmlFor="telegram">Telegram</Label>
+                                    <Input id="telegram" name="telegram" placeholder="@username" />
+                                </div>
+                                <div>
+                                    <Label htmlFor="whatsapp">WhatsApp</Label>
+                                    <Input id="whatsapp" name="whatsapp" type="tel" placeholder="+79991234567" />
+                                </div>
+                                <div>
+                                    <Label htmlFor="max">MAX</Label>
+                                    <Input id="max" name="max" placeholder="@max_username" />
+                                </div>
+                                <Button type="submit" className="w-full" disabled={createMutation.isPending}>
+                                    {createMutation.isPending ? 'Добавление...' : 'Добавить сотрудника'}
+                                </Button>
+                            </form>
+                        </DialogContent>
+                    </Dialog>
+                )}
             </div>
 
             {displayedEmployees.length === 0 && (

@@ -752,13 +752,23 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
             </p>
             <div className="flex gap-2 mt-3">
               <Button variant="outline" size="sm" onClick={() => {
+                if (!user.subscriptionActive) {
+                  setShowPaywall(true);
+                  return;
+                }
                 exportToPDF(currentOffer, user.logo);
               }}>
-                <Icon name="FileDown" size={16} className="mr-1" />
+                {!user.subscriptionActive ? <Icon name="Lock" size={16} className="mr-1" /> : <Icon name="FileDown" size={16} className="mr-1" />}
                 PDF
               </Button>
-              <Button variant="outline" size="sm" onClick={() => exportToExcel(currentOffer)}>
-                <Icon name="FileSpreadsheet" size={16} className="mr-1" />
+              <Button variant="outline" size="sm" onClick={() => {
+                if (!user.subscriptionActive) {
+                  setShowPaywall(true);
+                  return;
+                }
+                exportToExcel(currentOffer);
+              }}>
+                {!user.subscriptionActive ? <Icon name="Lock" size={16} className="mr-1" /> : <Icon name="FileSpreadsheet" size={16} className="mr-1" />}
                 Excel
               </Button>
             </div>

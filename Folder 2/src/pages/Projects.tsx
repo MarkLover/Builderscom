@@ -42,7 +42,13 @@ const Projects = () => {
 
     // Dialog states
     const [isProjectDialogOpen, setIsProjectDialogOpen] = useState(false);
+    const [showPaywall, setShowPaywall] = useState(false);
     const [isTransactionDialogOpen, setIsTransactionDialogOpen] = useState(false);
+
+    // Get user from localStorage
+    const userStr = localStorage.getItem('user');
+    const user = userStr ? JSON.parse(userStr) : null;
+    const isFreeUser = user && !user.subscriptionActive;
     const [selectedProject, setSelectedProject] = useState<Project | null>(null);
     const [transactionType, setTransactionType] = useState<'expense' | 'income'>('expense');
 
@@ -194,36 +200,61 @@ const Projects = () => {
                         </Button>
                     </div>
 
-                    <Dialog open={isProjectDialogOpen} onOpenChange={setIsProjectDialogOpen}>
-                        <DialogTrigger asChild>
-                            <Button>
-                                <Icon name="Plus" size={18} className="mr-2" />
-                                Новый объект
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                            <DialogHeader>
-                                <DialogTitle>Создать новый объект</DialogTitle>
-                            </DialogHeader>
-                            <form onSubmit={handleAddProject} className="space-y-4">
-                                <div>
-                                    <Label htmlFor="name">Название объекта</Label>
-                                    <Input id="name" name="name" placeholder="ЖК Солнечный" required />
-                                </div>
-                                <div>
-                                    <Label htmlFor="address">Адрес</Label>
-                                    <Input id="address" name="address" placeholder="ул. Мира, 10" required />
-                                </div>
-                                <div>
-                                    <Label htmlFor="budget">Бюджет (₽)</Label>
-                                    <MoneyInput id="budget" name="budget" placeholder="5 000 000" required />
-                                </div>
-                                <Button type="submit" className="w-full" disabled={createProjectMutation.isPending}>
-                                    {createProjectMutation.isPending ? 'Создание...' : 'Создать объект'}
+                    {isFreeUser && displayedProjects.length >= 1 ? (
+                        <Dialog open={showPaywall} onOpenChange={setShowPaywall}>
+                            <DialogTrigger asChild>
+                                <Button>
+                                    <Icon name="Lock" size={18} className="mr-2" />
+                                    Новый объект
                                 </Button>
-                            </form>
-                        </DialogContent>
-                    </Dialog>
+                            </DialogTrigger>
+                            <DialogContent>
+                                <DialogHeader>
+                                    <DialogTitle>Превышен лимит объектов</DialogTitle>
+                                    <p className="text-sm text-muted-foreground mt-2">
+                                        В бесплатной версии вы можете вести только один строительный объект.
+                                    </p>
+                                </DialogHeader>
+                                <div className="space-y-4 pt-4">
+                                    <p className="text-sm font-medium">Оформите подписку, чтобы вести неограниченное количество объектов.</p>
+                                    <Button className="w-full" onClick={() => window.location.href = '/profile'}>
+                                        {user?.hasUsedTrial ? 'Перейти на платный (10 ₽ - ТЕСТ)' : 'Попробовать 7 дней за 1 ₽'}
+                                    </Button>
+                                </div>
+                            </DialogContent>
+                        </Dialog>
+                    ) : (
+                        <Dialog open={isProjectDialogOpen} onOpenChange={setIsProjectDialogOpen}>
+                            <DialogTrigger asChild>
+                                <Button>
+                                    <Icon name="Plus" size={18} className="mr-2" />
+                                    Новый объект
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                                <DialogHeader>
+                                    <DialogTitle>Создать новый объект</DialogTitle>
+                                </DialogHeader>
+                                <form onSubmit={handleAddProject} className="space-y-4">
+                                    <div>
+                                        <Label htmlFor="name">Название объекта</Label>
+                                        <Input id="name" name="name" placeholder="ЖК Солнечный" required />
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="address">Адрес</Label>
+                                        <Input id="address" name="address" placeholder="ул. Мира, 10" required />
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="budget">Бюджет (₽)</Label>
+                                        <MoneyInput id="budget" name="budget" placeholder="5 000 000" required />
+                                    </div>
+                                    <Button type="submit" className="w-full" disabled={createProjectMutation.isPending}>
+                                        {createProjectMutation.isPending ? 'Создание...' : 'Создать объект'}
+                                    </Button>
+                                </form>
+                            </DialogContent>
+                        </Dialog>
+                    )}
                 </div>
 
                 {displayedProjects.length === 0 && (

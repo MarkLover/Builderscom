@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 
@@ -7,6 +7,23 @@ export class ProjectsService {
     constructor(private prisma: PrismaService) { }
 
     async create(userId: number, createProjectDto: CreateProjectDto) {
+        const user = await this.prisma.user.findUnique({
+            where: { id: userId },
+            select: { subscriptionActive: true }
+        });
+
+        if (!user) throw new NotFoundException('User not found');
+
+        if (!user.subscriptionActive) {
+            const projectCount = await this.prisma.project.count({
+                where: { userId }
+            });
+
+            if (projectCount >= 1) {
+                throw new ForbiddenException('Достигнут лимит объектов на бесплатном тарифе');
+            }
+        }
+
         return this.prisma.project.create({
             data: {
                 ...createProjectDto,

@@ -14,6 +14,7 @@ import Finances from "./pages/Finances";
 import Profile from "./pages/Profile";
 import Commercial from "./pages/Commercial";
 import SubscriptionPage from "./pages/SubscriptionPage";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 import { Layout } from "@/components/layout/Layout";
 
 const queryClient = new QueryClient();
@@ -53,6 +54,7 @@ const App = () => (
             <Route path="commercial" element={<Commercial />} />
             <Route path="subscription" element={<SubscriptionPage />} />
           </Route>
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

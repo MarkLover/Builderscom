@@ -11,6 +11,7 @@ import { authService } from '@/services/auth.service';
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
+  const [agreedToPrivacy, setAgreedToPrivacy] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   const telegramWrapperRef = useRef<HTMLDivElement>(null);
@@ -79,6 +80,11 @@ const Auth = () => {
 
     if (password.length < 6) {
       toast({ title: 'Ошибка регистрации', description: 'Пароль дожен быть минимум 6 символов.', variant: 'destructive' });
+      return;
+    }
+
+    if (!agreedToPrivacy) {
+      toast({ title: 'Ошибка регистрации', description: 'Необходимо согласие на обработку персональных данных.', variant: 'destructive' });
       return;
     }
 
@@ -268,7 +274,20 @@ const Auth = () => {
                 </div>
               </div>
 
-              <div className="pt-2 border-t">
+              <div className="pt-2 border-t mt-4">
+                <div className="flex items-start space-x-2 mb-4">
+                  <input
+                    type="checkbox"
+                    id="privacy"
+                    checked={agreedToPrivacy}
+                    onChange={(e) => setAgreedToPrivacy(e.target.checked)}
+                    className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                  />
+                  <Label htmlFor="privacy" className="text-sm font-normal text-muted-foreground leading-snug cursor-pointer">
+                    Я согласен с <a href="/privacy-policy" target="_blank" className="text-primary hover:underline" onClick={(e) => e.stopPropagation()}>Политикой в отношении обработки персональных данных</a>
+                  </Label>
+                </div>
+
                 <p className="text-sm font-medium mb-3">Рабочие страницы (опционально)</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
