@@ -21,13 +21,13 @@ export const ExpenseDistribution = ({ project }: ExpenseDistributionProps) => {
               </div>
               <div className="text-right">
                 <span className="text-xs font-semibold inline-block text-blue-600">
-                  {((project.stages.reduce((acc: number, s: any) => acc + s.materials, 0) / project.spent) * 100).toFixed(0)}%
+                  {project.spent ? ((project.stages.reduce((acc: number, s: any) => acc + (s.materials || 0), 0) / project.spent) * 100).toFixed(0) : 0}%
                 </span>
               </div>
             </div>
             <div className="overflow-hidden h-2 mb-4 text-xs flex rounded bg-blue-200">
-              <div 
-                style={{ width: `${(project.stages.reduce((acc: number, s: any) => acc + s.materials, 0) / project.spent) * 100}%` }} 
+              <div
+                style={{ width: `${project.spent ? (project.stages.reduce((acc: number, s: any) => acc + (s.materials || 0), 0) / project.spent) * 100 : 0}%` }}
                 className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-blue-500"
               />
             </div>
@@ -42,13 +42,13 @@ export const ExpenseDistribution = ({ project }: ExpenseDistributionProps) => {
               </div>
               <div className="text-right">
                 <span className="text-xs font-semibold inline-block text-orange-600">
-                  {((project.stages.reduce((acc: number, s: any) => acc + s.labor, 0) / project.spent) * 100).toFixed(0)}%
+                  {project.spent ? ((project.stages.reduce((acc: number, s: any) => acc + (s.labor || 0), 0) / project.spent) * 100).toFixed(0) : 0}%
                 </span>
               </div>
             </div>
             <div className="overflow-hidden h-2 mb-4 text-xs flex rounded bg-orange-200">
-              <div 
-                style={{ width: `${(project.stages.reduce((acc: number, s: any) => acc + s.labor, 0) / project.spent) * 100}%` }} 
+              <div
+                style={{ width: `${project.spent ? (project.stages.reduce((acc: number, s: any) => acc + (s.labor || 0), 0) / project.spent) * 100 : 0}%` }}
                 className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-orange-500"
               />
             </div>
