@@ -27,6 +27,7 @@ model User {
   companyUsers     CompanyUser[]
   companyExpenses  CompanyExpense[]
   expenseCategories ExpenseCategory[]
+  payments         Payment[]
 }
 
 // Company Users (employees with limited access)
@@ -258,4 +259,21 @@ model CommercialOfferMaterial {
   room     CommercialOfferRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
   
   createdAt DateTime @default(now())
+}
+
+// YooKassa Payments
+model Payment {
+  id          Int      @id @default(autoincrement())
+  paymentId   String   @unique // YooKassa payment ID
+  status      String   @default("pending") // "pending" | "waiting_for_capture" | "succeeded" | "canceled"
+  amount      Float
+  currency    String   @default("RUB")
+  description String?
+  metadata    Json?    // Store things like userId, months
+
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id])
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

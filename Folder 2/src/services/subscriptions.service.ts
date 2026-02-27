@@ -12,7 +12,14 @@ export const subscriptionsService = {
         return response.data;
     },
 
-    activate: async (months: number = 1): Promise<{ subscriptionActive: boolean; subscriptionExpiry: string }> => {
+    // Generates YooKassa payment link
+    generatePaymentLink: async (returnUrl: string): Promise<{ confirmationUrl: string, paymentId: string }> => {
+        const response = await api.post('/subscriptions/pay/premium', { returnUrl });
+        return response.data;
+    },
+
+    // Developer testing (Activate directly without payment)
+    activate: async (months: number = 1) => {
         const response = await api.post('/subscriptions/activate', { months });
         return response.data;
     },

@@ -2,9 +2,6 @@ import { useState, useEffect } from 'react';
 import Icon from '@/components/ui/icon';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { subscriptionsService, SubscriptionStatus } from '@/services/subscriptions.service';
@@ -15,7 +12,6 @@ interface SubscriptionProps {
 }
 
 export const Subscription = ({ user, onUpdateUser }: SubscriptionProps) => {
-  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus>({
     active: user.subscriptionActive || false,
@@ -43,42 +39,27 @@ export const Subscription = ({ user, onUpdateUser }: SubscriptionProps) => {
     }
   };
 
-  const handleUploadReceipt = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const files = (e.currentTarget.elements.namedItem('receipt') as HTMLInputElement).files;
+  const handlePayPremium = async () => {
+    try {
+      setLoading(true);
+      // We send the user to YooKassa and tell YooKassa to return them back to this page
+      const returnUrl = window.location.origin + '/profile';
+      const result = await subscriptionsService.generatePaymentLink(returnUrl);
 
-    if (files && files.length > 0) {
-      try {
-        setLoading(true);
-        // Activate subscription via API (1 month)
-        const result = await subscriptionsService.activate(1);
-
-        const updatedUser = {
-          ...user,
-          subscriptionActive: result.subscriptionActive,
-          subscriptionExpiry: result.subscriptionExpiry,
-        };
-
-        onUpdateUser(updatedUser);
-        setSubscriptionStatus({
-          active: result.subscriptionActive,
-          expiry: result.subscriptionExpiry,
-        });
-
-        setIsPaymentDialogOpen(false);
-        toast({
-          title: 'Подписка активирована',
-          description: `Подписка активна до ${new Date(result.subscriptionExpiry).toLocaleDateString('ru-RU')}`
-        });
-      } catch (error) {
-        toast({
-          title: 'Ошибка',
-          description: 'Не удалось активировать подписку',
-          variant: 'destructive'
-        });
-      } finally {
-        setLoading(false);
+      if (result && result.confirmationUrl) {
+        // Redirect to YooKassa payment page
+        window.location.href = result.confirmationUrl;
+      } else {
+        throw new Error('No confirmation URL received');
       }
+
+    } catch (error) {
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось создать платеж. Пожалуйста, попробуйте позже.',
+        variant: 'destructive'
+      });
+      setLoading(false);
     }
   };
 
@@ -216,50 +197,24 @@ export const Subscription = ({ user, onUpdateUser }: SubscriptionProps) => {
               </ul>
             </div>
 
-            <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="w-full" size="lg">
+            <Button
+              className="w-full"
+              size="lg"
+              onClick={handlePayPremium}
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <Icon name="Loader2" size={18} className="mr-2 animate-spin" />
+                  Переходим к оплате...
+                </>
+              ) : (
+                <>
                   <Icon name="CreditCard" size={18} className="mr-2" />
-                  {isActive ? 'Продлить подписку' : 'Перейти на платный'}
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Оплата подписки</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleUploadReceipt} className="space-y-4">
-                  <div className="p-4 bg-muted rounded-lg space-y-2">
-                    <p className="font-semibold">Реквизиты для оплаты:</p>
-                    <p className="text-sm">Сумма: <span className="font-bold">799 ₽</span></p>
-                    <p className="text-sm text-muted-foreground">
-                      После оплаты загрузите чек или скриншот платежа
-                    </p>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="receipt">Чек об оплате *</Label>
-                    <Input
-                      id="receipt"
-                      name="receipt"
-                      type="file"
-                      accept="image/*,.pdf"
-                      required
-                    />
-                  </div>
-
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? (
-                      <>
-                        <Icon name="Loader2" size={18} className="mr-2 animate-spin" />
-                        Активация...
-                      </>
-                    ) : (
-                      'Загрузить чек и активировать'
-                    )}
-                  </Button>
-                </form>
-              </DialogContent>
-            </Dialog>
+                  {isActive ? 'Продлить подписку' : 'Перейти на платный (799 ₽)'}
+                </>
+              )}
+            </Button>
           </CardContent>
         </Card>
       </div>
