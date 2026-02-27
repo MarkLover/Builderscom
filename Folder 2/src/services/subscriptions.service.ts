@@ -4,6 +4,7 @@ export interface SubscriptionStatus {
     active: boolean;
     expiry: string | null;
     isExpired?: boolean;
+    hasUsedTrial?: boolean;
 }
 
 export const subscriptionsService = {

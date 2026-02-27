@@ -9,6 +9,7 @@ export class SubscriptionsService {
     private readonly YOOKASSA_SHOP_ID = process.env.YOOKASSA_SHOP_ID;
     private readonly YOOKASSA_SECRET_KEY = process.env.YOOKASSA_SECRET_KEY;
     private readonly PREMIUM_PRICE = 10; // ВРЕМЕННО ДЛЯ ТЕСТА (вернуть 799 потом)
+    private readonly TRIAL_PRICE = 1;
 
     constructor(private prisma: PrismaService) { }
 
@@ -20,10 +21,18 @@ export class SubscriptionsService {
     async createPayment(userId: number, returnUrl: string) {
         const idempotenceKey = uuidv4();
 
+        // 1. Get User to check trial status
+        const user = await this.prisma.user.findUnique({ where: { id: userId } });
+        if (!user) throw new Error('User not found');
+
+        const isTrial = !user.hasUsedTrial;
+        const price = isTrial ? this.TRIAL_PRICE : this.PREMIUM_PRICE;
+        const months = isTrial ? 0 : 1; // 0 months for trial (we'll grant 7 days later based on isTrial flag)
+
         try {
             const response = await axios.post('https://api.yookassa.ru/v3/payments', {
                 amount: {
-                    value: this.PREMIUM_PRICE.toString() + '.00',
+                    value: price.toString() + '.00',
                     currency: 'RUB'
                 },
                 capture: true,
@@ -31,10 +40,11 @@ export class SubscriptionsService {
                     type: 'redirect',
                     return_url: returnUrl
                 },
-                description: `Подписка на тариф ПростоСтройка. Пользователь: ${userId}`,
+                description: isTrial ? `Пробная подписка на 7 дней. Пользователь: ${userId}` : `Подписка на тариф ПростоСтройка. Пользователь: ${userId}`,
                 metadata: {
                     userId: userId.toString(),
-                    months: "1"
+                    months: months.toString(),
+                    isTrial: isTrial ? "true" : "false"
                 }
             }, {
                 headers: {
@@ -97,11 +107,17 @@ export class SubscriptionsService {
             // If payment succeeded, activate the subscription
             if (status === 'succeeded' && payload.event === 'payment.succeeded') {
                 const userId = parseInt(paymentObj.metadata.userId, 10);
-                const months = parseInt(paymentObj.metadata.months, 10) || 1;
+                const isTrial = paymentObj.metadata.isTrial === "true";
+                const months = parseInt(paymentObj.metadata.months || "1", 10);
 
                 if (!isNaN(userId)) {
-                    await this.activateSubscription(userId, months);
-                    this.logger.log(`Subscription activated for user ${userId} via YooKassa payment ${paymentId}`);
+                    if (isTrial) {
+                        await this.activateTrial(userId);
+                        this.logger.log(`Trial activated for user ${userId} via YooKassa payment ${paymentId}`);
+                    } else {
+                        await this.activateSubscription(userId, months);
+                        this.logger.log(`Subscription activated for user ${userId} via YooKassa payment ${paymentId}`);
+                    }
                 }
             }
 
@@ -119,11 +135,12 @@ export class SubscriptionsService {
             select: {
                 subscriptionActive: true,
                 subscriptionExpiry: true,
+                hasUsedTrial: true,
             },
         });
 
         if (!user) {
-            return { active: false, expiry: null };
+            return { active: false, expiry: null, hasUsedTrial: false };
         }
 
         // Check if subscription has expired
@@ -135,6 +152,7 @@ export class SubscriptionsService {
             active: user.subscriptionActive && !isExpired,
             expiry: user.subscriptionExpiry,
             isExpired: isExpired && user.subscriptionExpiry !== null,
+            hasUsedTrial: user.hasUsedTrial,
         };
     }
 
@@ -160,6 +178,33 @@ export class SubscriptionsService {
                 id: true,
                 subscriptionActive: true,
                 subscriptionExpiry: true,
+                hasUsedTrial: true,
+            },
+        });
+    }
+
+    async activateTrial(userId: number) {
+        const user = await this.prisma.user.findUnique({ where: { id: userId } });
+        if (!user) return null;
+
+        let expiryDate = new Date();
+        if (user.subscriptionActive && user.subscriptionExpiry && new Date(user.subscriptionExpiry) > new Date()) {
+            expiryDate = new Date(user.subscriptionExpiry);
+        }
+        expiryDate.setDate(expiryDate.getDate() + 7); // Trial is 7 days
+
+        return this.prisma.user.update({
+            where: { id: userId },
+            data: {
+                subscriptionActive: true,
+                subscriptionExpiry: expiryDate,
+                hasUsedTrial: true, // Mark trial as used
+            },
+            select: {
+                id: true,
+                subscriptionActive: true,
+                subscriptionExpiry: true,
+                hasUsedTrial: true,
             },
         });
     }

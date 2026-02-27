@@ -21,6 +21,7 @@ model User {
   // Subscription
   subscriptionActive Boolean   @default(false)
   subscriptionExpiry DateTime?
+  hasUsedTrial       Boolean   @default(false)
 
   projects         Project[]
   commercialOffers CommercialOffer[]

@@ -31,6 +31,7 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
   const [selectedOffer, setSelectedOffer] = useState<number | null>(null);
   const [selectedRoom, setSelectedRoom] = useState<number | null>(null);
   const [isOfferDialogOpen, setIsOfferDialogOpen] = useState(false);
+  const [showPaywall, setShowPaywall] = useState(false);
   const [isRoomDialogOpen, setIsRoomDialogOpen] = useState(false);
   const [isWorkDialogOpen, setIsWorkDialogOpen] = useState(false);
   const [isMaterialDialogOpen, setIsMaterialDialogOpen] = useState(false);
@@ -1154,47 +1155,72 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
           <h2 className="text-2xl font-bold mb-2">Коммерческие предложения</h2>
           <p className="text-muted-foreground">Создание коммерческих предложений для клиентов</p>
         </div>
-        <Dialog open={isOfferDialogOpen} onOpenChange={setIsOfferDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Icon name="Plus" size={18} className="mr-2" />
-              Создать КП
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Новое коммерческое предложение</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleAddOffer} className="space-y-4">
-              <div>
-                <Label htmlFor="customerName">Имя Фамилия заказчика</Label>
-                <Input
-                  id="customerName"
-                  name="customerName"
-                  placeholder="Иван Петров"
-                />
+        {!user.subscriptionActive && offers.length >= 1 ? (
+          <Dialog open={showPaywall} onOpenChange={setShowPaywall}>
+            <DialogTrigger asChild>
+              <Button>
+                <Icon name="Lock" size={18} className="mr-2" />
+                Создать КП
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Превышен лимит</DialogTitle>
+                <p className="text-sm text-muted-foreground mt-2">
+                  В бесплатной версии доступно создание только одного коммерческого предложения.
+                </p>
+              </DialogHeader>
+              <div className="space-y-4 pt-4">
+                <p className="text-sm font-medium">Оформите подписку, чтобы создавать неограниченное количество КП.</p>
+                <Button className="w-full" onClick={() => window.location.href = '/profile'}>
+                  {user.hasUsedTrial ? 'Перейти на платный (10 ₽ - ТЕСТ)' : 'Попробовать 7 дней за 1 ₽'}
+                </Button>
               </div>
-              <div>
-                <Label htmlFor="customerPhone">Телефон заказчика</Label>
-                <Input
-                  id="customerPhone"
-                  name="customerPhone"
-                  placeholder="+7 (999) 000-00-00"
-                />
-              </div>
-              <div>
-                <Label htmlFor="address">Адрес объекта *</Label>
-                <Input
-                  id="address"
-                  name="address"
-                  placeholder="г. Москва, ул. Ленина, д. 15, кв. 42"
-                  required
-                />
-              </div>
-              <Button type="submit" className="w-full">Создать КП</Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
+        ) : (
+          <Dialog open={isOfferDialogOpen} onOpenChange={setIsOfferDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Icon name="Plus" size={18} className="mr-2" />
+                Создать КП
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Новое коммерческое предложение</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleAddOffer} className="space-y-4">
+                <div>
+                  <Label htmlFor="customerName">Имя Фамилия заказчика</Label>
+                  <Input
+                    id="customerName"
+                    name="customerName"
+                    placeholder="Иван Петров"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="customerPhone">Телефон заказчика</Label>
+                  <Input
+                    id="customerPhone"
+                    name="customerPhone"
+                    placeholder="+7 (999) 000-00-00"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="address">Адрес объекта *</Label>
+                  <Input
+                    id="address"
+                    name="address"
+                    placeholder="г. Москва, ул. Ленина, д. 15, кв. 42"
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full">Создать КП</Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       <div className="grid gap-4">

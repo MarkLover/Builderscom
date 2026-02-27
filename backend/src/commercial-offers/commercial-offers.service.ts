@@ -14,6 +14,24 @@ export class CommercialOffersService {
 
     // Create a new commercial offer
     async create(userId: number, dto: CreateCommercialOfferDto) {
+        // Enforce limit: Max 1 offer if no active subscription
+        const user = await this.prisma.user.findUnique({
+            where: { id: userId },
+            select: { subscriptionActive: true }
+        });
+
+        if (!user) throw new NotFoundException('User not found');
+
+        if (!user.subscriptionActive) {
+            const offerCount = await this.prisma.commercialOffer.count({
+                where: { userId }
+            });
+
+            if (offerCount >= 1) {
+                throw new ForbiddenException('TRIAL_LIMIT_REACHED');
+            }
+        }
+
         return this.prisma.commercialOffer.create({
             data: {
                 address: dto.address,

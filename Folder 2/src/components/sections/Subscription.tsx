@@ -16,6 +16,7 @@ export const Subscription = ({ user, onUpdateUser }: SubscriptionProps) => {
   const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus>({
     active: user.subscriptionActive || false,
     expiry: user.subscriptionExpiry || null,
+    hasUsedTrial: user?.hasUsedTrial || false,
   });
   const { toast } = useToast();
 
@@ -33,6 +34,7 @@ export const Subscription = ({ user, onUpdateUser }: SubscriptionProps) => {
         ...user,
         subscriptionActive: status.active,
         subscriptionExpiry: status.expiry,
+        hasUsedTrial: status.hasUsedTrial,
       });
     } catch (error) {
       // Ignore error if user is not authenticated yet
@@ -160,8 +162,8 @@ export const Subscription = ({ user, onUpdateUser }: SubscriptionProps) => {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="text-center py-4">
-              <p className="text-4xl font-bold">799 ₽</p>
-              <p className="text-sm text-muted-foreground">в месяц</p>
+              <p className="text-4xl font-bold">{subscriptionStatus.hasUsedTrial ? '799 ₽' : '1 ₽'}</p>
+              <p className="text-sm text-muted-foreground">{subscriptionStatus.hasUsedTrial ? 'в месяц' : 'первые 7 дней, далее 799 ₽/мес'}</p>
             </div>
 
             <div className="space-y-2">
@@ -211,7 +213,7 @@ export const Subscription = ({ user, onUpdateUser }: SubscriptionProps) => {
               ) : (
                 <>
                   <Icon name="CreditCard" size={18} className="mr-2" />
-                  {isActive ? 'Продлить подписку' : 'Перейти на платный (10 ₽ - ТЕСТ)'}
+                  {isActive ? 'Продлить подписку' : (subscriptionStatus.hasUsedTrial ? 'Перейти на платный (10 ₽ - ТЕСТ)' : 'Попробовать 7 дней за 1 ₽')}
                 </>
               )}
             </Button>
