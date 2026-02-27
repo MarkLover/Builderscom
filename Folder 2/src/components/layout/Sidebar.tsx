@@ -54,7 +54,10 @@ export const Sidebar = ({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen: (op
 
     if (!user) return null;
 
-    const companyName = user.userType === 'employee' ? user.ownerCompany : user.company;
+    let companyName = user.userType === 'employee' ? user.ownerCompany : user.company;
+    if (companyName === 'Telegram User') {
+        companyName = user.name;
+    }
 
     const NavItem = ({ path, icon, label }: { path: string, icon: string, label: string }) => {
         const active = isActive(path);

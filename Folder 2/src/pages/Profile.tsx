@@ -126,7 +126,7 @@ const Profile = () => {
                         </div>
                         <div>
                             <label className="text-sm font-medium">Телефон</label>
-                            <p className="text-muted-foreground">{user.phone}</p>
+                            <p className="text-muted-foreground">{user.phone?.replace('tg_', '')}</p>
                         </div>
                     </CardContent>
                 </Card>
@@ -168,7 +168,7 @@ const Profile = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label className="text-sm font-medium">Телефон</label>
-                            <p className="text-muted-foreground">{user.phone}</p>
+                            <p className="text-muted-foreground">{user.phone?.replace('tg_', '')}</p>
                         </div>
                         <div>
                             <label className="text-sm font-medium">Тип аккаунта</label>
