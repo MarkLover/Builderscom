@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import fetch from 'node-fetch';
+import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
@@ -21,38 +21,30 @@ export class SubscriptionsService {
         const idempotenceKey = uuidv4();
 
         try {
-            const response = await fetch('https://api.yookassa.ru/v3/payments', {
-                method: 'POST',
+            const response = await axios.post('https://api.yookassa.ru/v3/payments', {
+                amount: {
+                    value: this.PREMIUM_PRICE.toString() + '.00',
+                    currency: 'RUB'
+                },
+                capture: true,
+                confirmation: {
+                    type: 'redirect',
+                    return_url: returnUrl
+                },
+                description: `Подписка на тариф ПростоСтройка. Пользователь: ${userId}`,
+                metadata: {
+                    userId: userId.toString(),
+                    months: "1"
+                }
+            }, {
                 headers: {
                     'Content-Type': 'application/json',
                     'Idempotence-Key': idempotenceKey,
                     'Authorization': this.getAuthHeader()
-                },
-                body: JSON.stringify({
-                    amount: {
-                        value: this.PREMIUM_PRICE.toString() + '.00',
-                        currency: 'RUB'
-                    },
-                    capture: true,
-                    confirmation: {
-                        type: 'redirect',
-                        return_url: returnUrl
-                    },
-                    description: `Подписка на тариф ПростоСтройка. Пользователь: ${userId}`,
-                    metadata: {
-                        userId: userId.toString(),
-                        months: "1"
-                    }
-                })
+                }
             });
 
-            if (!response.ok) {
-                const errData = await response.text();
-                this.logger.error(`YooKassa Error: ${errData}`);
-                throw new Error('Failed to create payment in YooKassa');
-            }
-
-            const paymentData: any = await response.json();
+            const paymentData = response.data;
 
             // Save pending payment to our database
             await this.prisma.payment.create({
