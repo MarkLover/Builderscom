@@ -14,6 +14,11 @@ import { commercialOffersService, CommercialOffer, Room, Work, Material } from '
 import { employeesService } from '@/services/employees.service';
 import { usersService } from '@/services/users.service';
 
+export const getImageUrl = (url?: string) => {
+  if (!url) return '';
+  return url.startsWith('/uploads/') ? `/api${url}` : url;
+};
+
 interface CommercialOffersProps {
   user: any;
 }
@@ -336,7 +341,8 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
     return new Date(dateStr).toLocaleDateString('ru-RU');
   };
 
-  const exportToPDF = async (offer: CommercialOffer, logoUrl?: string) => {
+  const exportToPDF = async (offer: CommercialOffer, rawLogoUrl?: string) => {
+    const logoUrl = rawLogoUrl ? getImageUrl(rawLogoUrl) : '';
     // Fetch fonts and images
     let fontBase64: string;
     let fontBoldBase64: string;
@@ -416,7 +422,7 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
     // Central Image (Plan)
     if (offer.planImage) {
       try {
-        const planResp = await fetch(offer.planImage);
+        const planResp = await fetch(getImageUrl(offer.planImage));
         const planBuf = await planResp.arrayBuffer();
         const planBase64 = btoa(new Uint8Array(planBuf).reduce((data, byte) => data + String.fromCharCode(byte), ''));
         const ext = offer.planImage.split('.').pop()?.toUpperCase();
@@ -795,7 +801,7 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
                   <div className="flex items-center gap-2 w-48 justify-end">
                     {user.logo ? (
                       <div className="flex items-center gap-2">
-                        <img src={user.logo} alt="Logo" className="h-8 w-auto object-contain bg-white rounded border" />
+                        <img src={getImageUrl(user.logo)} alt="Logo" className="h-8 w-auto object-contain bg-white rounded border" />
                         <Button
                           variant="ghost"
                           size="icon"
@@ -814,7 +820,7 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
                         type="file"
                         id="logoUpload"
                         className="hidden"
-                        accept="image/*"
+                        accept=".jpg,.jpeg,.png"
                         onChange={handleLogoUpload}
                         disabled={isUploading}
                       />
@@ -836,7 +842,7 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
                   <div className="flex items-center gap-2 w-48 justify-end">
                     {currentOffer.planImage && (
                       <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
-                        <a href={currentOffer.planImage} target="_blank" rel="noopener noreferrer">
+                        <a href={getImageUrl(currentOffer.planImage)} target="_blank" rel="noopener noreferrer">
                           <Icon name="Eye" size={14} />
                         </a>
                       </Button>
@@ -846,6 +852,7 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
                         type="file"
                         id="planImageUpload"
                         className="hidden"
+                        accept=".jpg,.jpeg,.png"
                         onChange={(e) => handleFileUpload(e, currentOffer.id)}
                         disabled={isUploading}
                       />

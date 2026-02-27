@@ -28,7 +28,7 @@ export class UploadController {
         const response = {
             originalName: file.originalname,
             filename: file.filename,
-            url: `/uploads/${file.filename}`,
+            url: `/api/uploads/${file.filename}`,
         };
         return response;
     }
