@@ -211,7 +211,7 @@ export const Subscription = ({ user, onUpdateUser }: SubscriptionProps) => {
               ) : (
                 <>
                   <Icon name="CreditCard" size={18} className="mr-2" />
-                  {isActive ? 'Продлить подписку' : 'Перейти на платный (799 ₽)'}
+                  {isActive ? 'Продлить подписку' : 'Перейти на платный (10 ₽ - ТЕСТ)'}
                 </>
               )}
             </Button>

@@ -8,7 +8,7 @@ export class SubscriptionsService {
     private readonly logger = new Logger(SubscriptionsService.name);
     private readonly YOOKASSA_SHOP_ID = process.env.YOOKASSA_SHOP_ID;
     private readonly YOOKASSA_SECRET_KEY = process.env.YOOKASSA_SECRET_KEY;
-    private readonly PREMIUM_PRICE = 799;
+    private readonly PREMIUM_PRICE = 10; // ВРЕМЕННО ДЛЯ ТЕСТА (вернуть 799 потом)
 
     constructor(private prisma: PrismaService) { }
 
