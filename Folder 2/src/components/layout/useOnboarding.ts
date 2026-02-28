@@ -10,6 +10,12 @@ export const useOnboarding = () => {
 
         // Only show the guide if they are logged in and haven't seen it yet
         if (token && !hasSeenGuide) {
+            // Mobile users shouldn't see the driver.js tour, since the sidebar is hidden and it crashes the progression
+            if (window.innerWidth < 768) {
+                localStorage.setItem('hasSeenOnboardingGuide', 'true');
+                return;
+            }
+
             const driverObj = driver({
                 showProgress: true,
                 nextBtnText: 'Далее &rarr;',
@@ -48,15 +54,6 @@ export const useOnboarding = () => {
                             title: 'Коммерческие предложения',
                             description: 'Создавайте красивые КП в формате PDF для ваших клиентов за пару минут с помощью нашей базы материалов и работ.',
                             side: 'right',
-                        }
-                    },
-                    {
-                        element: '.md\\:hidden', // Mobile menu button
-                        popover: {
-                            title: 'Мобильное меню',
-                            description: 'С телефона или планшета все разделы скрыты здесь для удобства.',
-                            side: 'bottom',
-                            align: 'start'
                         }
                     }
                 ],

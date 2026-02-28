@@ -25,14 +25,18 @@ interface User {
 export const Sidebar = ({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen: (open: boolean) => void }) => {
     const location = useLocation();
     const navigate = useNavigate();
-    const [user, setUser] = useState<User | null>(null);
+    const [user, setUser] = useState<User | null>(() => {
+        const savedUser = localStorage.getItem('user');
+        return savedUser ? JSON.parse(savedUser) : null;
+    });
 
     useEffect(() => {
+        // Fallback in case it changes later, though unnecessary for the initial layout mostly
         const savedUser = localStorage.getItem('user');
         if (savedUser) {
             setUser(JSON.parse(savedUser));
         }
-    }, []);
+    }, [location.pathname]);
 
     const handleLogout = () => {
         localStorage.removeItem('user');
@@ -51,7 +55,9 @@ export const Sidebar = ({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen: (op
         if (!user) return false;
         if (key === 'admin') return user.role === 'admin';
         if (user.userType !== 'employee') return true;
-        return user.permissions?.[key as any] ?? false;
+
+        // Assert type properly to satisfy the TS compiler
+        return (user.permissions as any)?.[key] ?? false;
     };
 
     if (!user) return null;
