@@ -13,6 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { commercialOffersService, CommercialOffer, Room, Work, Material } from '@/services/commercial-offers.service';
 import { employeesService } from '@/services/employees.service';
 import { usersService } from '@/services/users.service';
+import { usePageOnboarding } from '@/components/layout/useOnboarding';
+import { DriveStep } from 'driver.js';
 
 export const getImageUrl = (url?: string) => {
   if (!url) return '';
@@ -59,6 +61,55 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
       setLoading(false);
     }
   };
+
+  // Inner Tour Configuration
+  const innerCommercialTourSteps: DriveStep[] = [
+    {
+      popover: {
+        title: 'Настройка сметы 🛠️',
+        description: 'Отлично! Смета создана. Давайте разберемся, как ее настроить перед отправкой клиенту.',
+        align: 'center'
+      }
+    },
+    {
+      element: '#tour-co-discount',
+      popover: {
+        title: 'Скидка',
+        description: 'Вы можете указать общую скидку на всю смету в процентах.',
+        side: 'bottom',
+        align: 'end'
+      }
+    },
+    {
+      element: '#tour-co-plan',
+      popover: {
+        title: 'План помещения',
+        description: 'Загрузите изображение плана. Оно будет красиво смотреться на титульном листе PDF-документа.',
+        side: 'top',
+        align: 'end'
+      }
+    },
+    {
+      element: '#tour-co-rooms',
+      popover: {
+        title: 'Добавление помещений',
+        description: 'Нажмите здесь, чтобы разбить смету на комнаты (например, Кухня, Гостиная). Для каждой комнаты вы сможете выбрать работы и материалы.',
+        side: 'bottom',
+        align: 'end'
+      }
+    },
+    {
+      element: '#tour-co-export',
+      popover: {
+        title: 'Экспорт',
+        description: 'Когда смета будет готова, выгрузите ее в красивом PDF-формате (с вашим логотипом) или в редактируемом Excel.',
+        side: 'bottom',
+        align: 'end'
+      }
+    }
+  ];
+
+  usePageOnboarding(!!selectedOffer && !loading, 'inner_commercial_page', innerCommercialTourSteps);
 
   const workTemplates = [
     { name: 'Штукатурка стен', unit: 'м2' as const, price: 450 },
@@ -750,7 +801,7 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
             <p className="text-3xl font-bold text-primary">
               {calculateOfferTotal(currentOffer).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽
             </p>
-            <div className="flex gap-2 mt-3">
+            <div id="tour-co-export" className="flex gap-2 mt-3">
               <Button variant="outline" size="sm" onClick={() => {
                 if (!user.subscriptionActive) {
                   setShowPaywall(true);
@@ -776,14 +827,16 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
               <div className="mt-4 space-y-3 p-4 bg-muted/50 rounded-lg border">
                 <div className="flex items-center gap-2 justify-between">
                   <Label htmlFor="globalDiscount" className="text-sm font-medium">Скидка на смету (%):</Label>
-                  <Input
-                    id="globalDiscount"
-                    type="number"
-                    className="w-32 h-8 bg-background"
-                    placeholder="0"
-                    defaultValue={currentOffer.discount || 0}
-                    onChange={(e) => handleDebouncedDiscountUpdate(currentOffer.id, Number(e.target.value))}
-                  />
+                  <div id="tour-co-discount">
+                    <Input
+                      id="globalDiscount"
+                      type="number"
+                      className="w-32 h-8 bg-background"
+                      placeholder="0"
+                      defaultValue={currentOffer.discount || 0}
+                      onChange={(e) => handleDebouncedDiscountUpdate(currentOffer.id, Number(e.target.value))}
+                    />
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-2 justify-between">
@@ -850,7 +903,7 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
 
                 <div className="flex items-center gap-2 justify-between">
                   <Label className="text-sm font-medium">План помещения:</Label>
-                  <div className="flex items-center gap-2 w-48 justify-end">
+                  <div id="tour-co-plan" className="flex items-center gap-2 w-48 justify-end">
                     {currentOffer.planImage && (
                       <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
                         <a href={getImageUrl(currentOffer.planImage)} target="_blank" rel="noopener noreferrer">
@@ -888,7 +941,7 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
         <div className="flex justify-end">
           <Dialog open={isRoomDialogOpen} onOpenChange={setIsRoomDialogOpen}>
             <DialogTrigger asChild>
-              <Button>
+              <Button id="tour-co-rooms">
                 <Icon name="Plus" size={18} className="mr-2" />
                 Добавить помещение
               </Button>

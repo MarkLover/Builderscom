@@ -5,7 +5,6 @@ import Icon from '@/components/ui/icon';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import Onboarding from '@/components/Onboarding';
 import { projectsService } from '@/services/projects.service';
 
 interface Transaction {
@@ -35,7 +34,6 @@ interface Project {
 const Index = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
-  const [showOnboarding, setShowOnboarding] = useState(false);
 
   // Fetch projects from API
   const { data: projects = [], isLoading } = useQuery({
@@ -48,18 +46,7 @@ const Index = () => {
     if (savedUser) {
       setUser(JSON.parse(savedUser));
     }
-
-    const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding');
-    // Only show onboarding if no projects and haven't seen it
-    if (!hasSeenOnboarding && projects.length === 0 && !isLoading) {
-      setShowOnboarding(true);
-    }
-  }, [projects.length, isLoading]);
-
-  const handleOnboardingComplete = () => {
-    localStorage.setItem('hasSeenOnboarding', 'true');
-    setShowOnboarding(false);
-  };
+  }, []);
 
   // Helper to calculate project stats from transactions
   const calculateProjectStats = (project: Project) => {
@@ -159,8 +146,6 @@ const Index = () => {
 
   return (
     <>
-      {showOnboarding && <Onboarding userName={user.name} onComplete={handleOnboardingComplete} />}
-
       <div className="space-y-6">
         {isEmpty && !isLoading && (
           <Card className="bg-gradient-to-br from-primary/10 via-background to-secondary/10 border-2 border-dashed">
