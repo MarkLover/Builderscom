@@ -84,7 +84,7 @@ export const FinancesView = (props: FinancesViewProps) => {
           </select>
           <Dialog open={isStageDialogOpen} onOpenChange={setIsStageDialogOpen}>
             <DialogTrigger asChild>
-              <Button>
+              <Button id="tour-fin-stage">
                 <Icon name="Plus" size={18} className="mr-2" />
                 Добавить этап
               </Button>
@@ -134,12 +134,14 @@ export const FinancesView = (props: FinancesViewProps) => {
 
         {/* Company Wide Info */}
         <div className="xl:col-span-6 space-y-6">
-          <CompanyExpensesCard
-            companyExpenses={companyExpenses}
-            isCompanyExpenseDialogOpen={isCompanyExpenseDialogOpen}
-            setIsCompanyExpenseDialogOpen={setIsCompanyExpenseDialogOpen}
-            handleAddCompanyExpense={handleAddCompanyExpense}
-          />
+          <div id="tour-fin-company">
+            <CompanyExpensesCard
+              companyExpenses={companyExpenses}
+              isCompanyExpenseDialogOpen={isCompanyExpenseDialogOpen}
+              setIsCompanyExpenseDialogOpen={setIsCompanyExpenseDialogOpen}
+              handleAddCompanyExpense={handleAddCompanyExpense}
+            />
+          </div>
 
           <ExpenseCategoriesCard
             expenseCategories={expenseCategories}

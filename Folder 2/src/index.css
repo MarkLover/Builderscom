@@ -100,3 +100,82 @@
     font-family: "Roboto", sans-serif;
   }
 }
+
+/* Custom Driver.js Styling */
+.driver-popover {
+  border-radius: var(--radius) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  background-color: hsl(var(--background)) !important;
+  color: hsl(var(--foreground)) !important;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1) !important;
+  padding: 1.5rem !important;
+}
+
+.driver-popover-title {
+  font-size: 1.125rem !important;
+  font-weight: 600 !important;
+  margin-bottom: 0.5rem !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+.driver-popover-description {
+  font-size: 0.875rem !important;
+  color: hsl(var(--muted-foreground)) !important;
+  margin-bottom: 1rem !important;
+  line-height: 1.5 !important;
+}
+
+.driver-popover-footer {
+  margin-top: 1rem !important;
+}
+
+.driver-popover-progress-text {
+  font-size: 0.75rem !important;
+  color: hsl(var(--muted-foreground)) !important;
+  font-weight: 500 !important;
+}
+
+.driver-popover-navigation-btns {
+  gap: 0.5rem !important;
+}
+
+.driver-popover-prev-btn,
+.driver-popover-next-btn {
+  border-radius: var(--radius) !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  padding: 0.5rem 1rem !important;
+  transition: all 0.2s !important;
+  text-shadow: none !important;
+}
+
+.driver-popover-next-btn {
+  background-color: hsl(var(--primary)) !important;
+  color: hsl(var(--primary-foreground)) !important;
+  border: none !important;
+}
+
+.driver-popover-next-btn:hover {
+  background-color: hsl(var(--primary) / 0.9) !important;
+}
+
+.driver-popover-prev-btn {
+  background-color: transparent !important;
+  color: hsl(var(--foreground)) !important;
+  border: 1px solid hsl(var(--input)) !important;
+}
+
+.driver-popover-prev-btn:hover {
+  background-color: hsl(var(--accent)) !important;
+  color: hsl(var(--accent-foreground)) !important;
+}
+
+.driver-popover-close-btn {
+  color: hsl(var(--muted-foreground)) !important;
+  top: 1rem !important;
+  right: 1rem !important;
+}
+
+.driver-popover-close-btn:hover {
+  color: hsl(var(--foreground)) !important;
+}

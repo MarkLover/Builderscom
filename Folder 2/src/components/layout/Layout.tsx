@@ -3,14 +3,50 @@ import { Sidebar } from '@/components/layout/Sidebar';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import Icon from '@/components/ui/icon';
-import { useOnboarding } from '@/components/layout/useOnboarding';
+import { usePageOnboarding } from '@/components/layout/useOnboarding';
+import { DriveStep } from 'driver.js';
 
 export const Layout = () => {
     const navigate = useNavigate();
     const [isLoading, setIsLoading] = useState(true);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-    useOnboarding(!isLoading);
+    const mainTourSteps: DriveStep[] = [
+        {
+            popover: {
+                title: 'Добро пожаловать в ПростоСтройка! 🎉',
+                description: 'Давайте проведем для вас небольшую экскурсию по основным функциям платформы. Это займет всего 30 секунд.',
+                align: 'center'
+            }
+        },
+        {
+            element: '#tour-projects',
+            popover: {
+                title: 'Управление объектами',
+                description: 'Начните с создания вашего первого строительного объекта. Здесь вы сможете управлять этапами, бюджетами и сроками.',
+                side: 'right',
+                align: 'start'
+            }
+        },
+        {
+            element: '#tour-finances',
+            popover: {
+                title: 'Финансовый учет',
+                description: 'В этом разделе вы можете вести учет всех доходов и расходов по объектам и компании в целом.',
+                side: 'right',
+            }
+        },
+        {
+            element: '#tour-commercial',
+            popover: {
+                title: 'Коммерческие предложения',
+                description: 'Создавайте красивые КП в формате PDF для ваших клиентов за пару минут с помощью нашей базы материалов и работ.',
+                side: 'right',
+            }
+        }
+    ];
+
+    usePageOnboarding(!isLoading, 'main_layout', mainTourSteps);
 
     useEffect(() => {
         const userData = localStorage.getItem('user');

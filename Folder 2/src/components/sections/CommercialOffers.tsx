@@ -1191,7 +1191,7 @@ export const CommercialOffers = ({ user }: CommercialOffersProps) => {
         ) : (
           <Dialog open={isOfferDialogOpen} onOpenChange={setIsOfferDialogOpen}>
             <DialogTrigger asChild>
-              <Button>
+              <Button id="tour-co-create">
                 <Icon name="Plus" size={18} className="mr-2" />
                 Создать КП
               </Button>

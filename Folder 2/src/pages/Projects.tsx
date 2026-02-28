@@ -10,6 +10,8 @@ import { MoneyInput } from '@/components/ui/MoneyInput';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { projectsService } from '@/services/projects.service';
+import { usePageOnboarding } from '@/components/layout/useOnboarding';
+import { DriveStep } from 'driver.js';
 
 interface Transaction {
     id: number;
@@ -57,6 +59,28 @@ const Projects = () => {
         queryKey: ['projects'],
         queryFn: projectsService.getAll,
     });
+
+    // Tour configuration
+    const projectsTourSteps: DriveStep[] = [
+        {
+            popover: {
+                title: 'Объекты 🏗️',
+                description: 'Это ваш главный рабочий стол. Здесь будут отображаться все ваши текущие и завершенные строительные объекты.',
+                align: 'center'
+            }
+        },
+        {
+            element: '#tour-project-create-btn',
+            popover: {
+                title: 'Новый объект',
+                description: 'Начните с добавления первого строительного объекта. Укажите название, адрес и планируемый бюджет.',
+                side: 'bottom',
+                align: 'end'
+            }
+        }
+    ];
+
+    usePageOnboarding(!isLoading, 'projects_page', projectsTourSteps);
 
     // Mutations
     const createProjectMutation = useMutation({
@@ -226,7 +250,7 @@ const Projects = () => {
                     ) : (
                         <Dialog open={isProjectDialogOpen} onOpenChange={setIsProjectDialogOpen}>
                             <DialogTrigger asChild>
-                                <Button>
+                                <Button id="tour-project-create-btn">
                                     <Icon name="Plus" size={18} className="mr-2" />
                                     Новый объект
                                 </Button>

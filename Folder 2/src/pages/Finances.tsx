@@ -5,6 +5,8 @@ import { projectsService } from '@/services/projects.service';
 import { companyExpensesService } from '@/services/company-expenses.service';
 import { expenseCategoriesService } from '@/services/expense-categories.service';
 import { FinancesView } from '@/components/sections/projects/FinancesView';
+import { usePageOnboarding } from '@/components/layout/useOnboarding';
+import { DriveStep } from 'driver.js';
 
 const Finances = () => {
     const { toast } = useToast();
@@ -35,6 +37,37 @@ const Finances = () => {
         queryKey: ['expenseCategories'],
         queryFn: expenseCategoriesService.getAll,
     });
+
+    // Tour configuration
+    const financesTourSteps: DriveStep[] = [
+        {
+            popover: {
+                title: 'Финансовый учет 💰',
+                description: 'Здесь вы можете контролировать бюджеты по каждому объекту, а также вести учет общих расходов компании.',
+                align: 'center'
+            }
+        },
+        {
+            element: '#tour-fin-stage',
+            popover: {
+                title: 'Этапы работ',
+                description: 'Разбивайте объект на этапы (например, «Фундамент», «Коробка», «Кровля») и контролируйте прибыльность каждого.',
+                side: 'bottom',
+                align: 'end'
+            }
+        },
+        {
+            element: '#tour-fin-company',
+            popover: {
+                title: 'Расходы компании',
+                description: 'Учитывайте аренду офиса, рекламу, покупку инструмента и прочие затраты, не привязанные к конкретным объекрам.',
+                side: 'top',
+                align: 'start'
+            }
+        }
+    ];
+
+    usePageOnboarding(!isLoadingProjects && !isLoadingExpenses && !isLoadingCategories, 'finances_page', financesTourSteps);
 
     // Mutations
     const createStageMutation = useMutation({
