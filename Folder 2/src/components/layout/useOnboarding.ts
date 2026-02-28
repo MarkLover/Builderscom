@@ -12,8 +12,9 @@ export const useOnboarding = (isReady: boolean) => {
 
         // Only show the guide if they are logged in and haven't seen it yet
         if (token && !hasSeenGuide) {
+            console.log('Starting driver.js onboarding...');
             // Mobile users shouldn't see the driver.js tour, since the sidebar is hidden and it crashes the progression
-            if (window.innerWidth < 768) {
+            if (window.innerWidth < 1024) { // Increased to 1024 for safety
                 localStorage.setItem('hasSeenOnboardingGuide', 'true');
                 return;
             }
@@ -25,12 +26,10 @@ export const useOnboarding = (isReady: boolean) => {
                 doneBtnText: 'Готово',
                 steps: [
                     {
-                        element: 'aside nav',
                         popover: {
-                            title: 'Добро пожаловать в ПростоСтройка!',
-                            description: 'Это ваше главное меню. Здесь вы найдете все необходимые инструменты для управления строительными проектами.',
-                            side: 'right',
-                            align: 'start'
+                            title: 'Добро пожаловать в ПростоСтройка! 🎉',
+                            description: 'Давайте проведем для вас небольшую экскурсию по основным функциям платформы. Это займет всего 30 секунд.',
+                            align: 'center'
                         }
                     },
                     {
