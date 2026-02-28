@@ -15,7 +15,9 @@ import Profile from "./pages/Profile";
 import Commercial from "./pages/Commercial";
 import SubscriptionPage from "./pages/SubscriptionPage";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
+import Admin from "./pages/Admin";
 import { Layout } from "@/components/layout/Layout";
+import { CookieConsent } from "@/components/layout/CookieConsent";
 
 const queryClient = new QueryClient();
 
@@ -53,11 +55,13 @@ const App = () => (
             <Route path="profile" element={<Profile />} />
             <Route path="commercial" element={<Commercial />} />
             <Route path="subscription" element={<SubscriptionPage />} />
+            <Route path="admin" element={<Admin />} />
           </Route>
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
+      <CookieConsent />
     </TooltipProvider>
   </QueryClientProvider>
 );

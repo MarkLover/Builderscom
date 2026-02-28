@@ -9,6 +9,7 @@ interface User {
     ownerCompany?: string;
     accountType?: 'personal' | 'business';
     userType?: 'owner' | 'employee';
+    role?: string;
     permissions?: {
         dashboard: boolean;
         projects: boolean;
@@ -46,10 +47,11 @@ export const Sidebar = ({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen: (op
         return location.pathname.startsWith(path);
     };
 
-    const hasPermission = (key: keyof NonNullable<User['permissions']>) => {
+    const hasPermission = (key: keyof NonNullable<User['permissions']> | 'admin') => {
         if (!user) return false;
+        if (key === 'admin') return user.role === 'admin';
         if (user.userType !== 'employee') return true;
-        return user.permissions?.[key] ?? false;
+        return user.permissions?.[key as any] ?? false;
     };
 
     if (!user) return null;
@@ -102,6 +104,7 @@ export const Sidebar = ({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen: (op
                     {hasPermission('tasks') && <NavItem path="/tasks" icon="CheckSquare" label="Задачи" />}
 
                     <div className="mt-auto pt-4 border-t">
+                        {hasPermission('admin') && <NavItem path="/admin" icon="Shield" label="Админ-панель" />}
                         {hasPermission('profile') && <NavItem path="/profile" icon="User" label="Профиль" />}
                         {hasPermission('subscription') && <NavItem path="/subscription" icon="CreditCard" label="Подписка" />}
 

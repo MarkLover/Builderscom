@@ -3,11 +3,14 @@ import { Sidebar } from '@/components/layout/Sidebar';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import Icon from '@/components/ui/icon';
+import { useOnboarding } from '@/components/layout/useOnboarding';
 
 export const Layout = () => {
     const navigate = useNavigate();
     const [isLoading, setIsLoading] = useState(true);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+    useOnboarding();
 
     useEffect(() => {
         const userData = localStorage.getItem('user');

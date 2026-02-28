@@ -13,6 +13,7 @@ import { CompanyUsersModule } from './company-users/company-users.module';
 import { CompanyExpensesModule } from './company-expenses/company-expenses.module';
 import { ExpenseCategoriesModule } from './expense-categories/expense-categories.module';
 import { UploadModule } from './upload/upload.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { UploadModule } from './upload/upload.module';
     CompanyExpensesModule,
     ExpenseCategoriesModule,
     UploadModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [AppService],
