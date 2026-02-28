@@ -10,7 +10,7 @@ export const Layout = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-    useOnboarding();
+    useOnboarding(!isLoading);
 
     useEffect(() => {
         const userData = localStorage.getItem('user');

@@ -2,8 +2,10 @@ import { useEffect } from 'react';
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
 
-export const useOnboarding = () => {
+export const useOnboarding = (isReady: boolean) => {
     useEffect(() => {
+        if (!isReady) return;
+
         // Check if the user has already seen the onboarding guide
         const hasSeenGuide = localStorage.getItem('hasSeenOnboardingGuide');
         const token = localStorage.getItem('token');
@@ -69,5 +71,5 @@ export const useOnboarding = () => {
                 driverObj.drive();
             }, 500);
         }
-    }, []);
+    }, [isReady]);
 };
