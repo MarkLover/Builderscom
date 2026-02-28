@@ -58,10 +58,11 @@ const Admin = () => {
         try {
             const token = localStorage.getItem('token');
             const headers = { 'Authorization': `Bearer ${token}` };
+            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
             const [statsRes, usersRes] = await Promise.all([
-                fetch('http://localhost:3000/api/admin/stats', { headers }),
-                fetch(`http://localhost:3000/api/admin/users?page=${page}&limit=20`, { headers })
+                fetch(`${API_URL}/admin/stats`, { headers }),
+                fetch(`${API_URL}/admin/users?page=${page}&limit=20`, { headers })
             ]);
 
             if (!statsRes.ok || !usersRes.ok) {

@@ -26,7 +26,7 @@ export const useOnboarding = () => {
                         }
                     },
                     {
-                        element: 'a[href="/projects"], button:has(div:contains("Объекты"))', // Fallback selector for sidebar navigation
+                        element: '#tour-projects',
                         popover: {
                             title: 'Управление объектами',
                             description: 'Начните с создания вашего первого строительного объекта. Здесь вы сможете управлять этапами, бюджетами и сроками.',
@@ -35,7 +35,7 @@ export const useOnboarding = () => {
                         }
                     },
                     {
-                        element: 'a[href="/finances"], button:has(div:contains("Финансы"))',
+                        element: '#tour-finances',
                         popover: {
                             title: 'Финансовый учет',
                             description: 'В этом разделе вы можете вести учет всех доходов и расходов по объектам и компании в целом.',
@@ -43,7 +43,7 @@ export const useOnboarding = () => {
                         }
                     },
                     {
-                        element: 'a[href="/commercial"], button:has(div:contains("КП"))',
+                        element: '#tour-commercial',
                         popover: {
                             title: 'Коммерческие предложения',
                             description: 'Создавайте красивые КП в формате PDF для ваших клиентов за пару минут с помощью нашей базы материалов и работ.',

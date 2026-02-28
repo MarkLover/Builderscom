@@ -61,10 +61,11 @@ export const Sidebar = ({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen: (op
         companyName = user.name;
     }
 
-    const NavItem = ({ path, icon, label }: { path: string, icon: string, label: string }) => {
+    const NavItem = ({ path, icon, label, id }: { path: string, icon: string, label: string, id?: string }) => {
         const active = isActive(path);
         return (
             <Button
+                id={id}
                 variant={active ? 'default' : 'ghost'}
                 className={`w-full justify-start mb-2 ${active ? '' : 'hover:bg-muted'}`}
                 onClick={() => {
@@ -96,12 +97,12 @@ export const Sidebar = ({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen: (op
                 </div>
 
                 <nav className="flex-1 overflow-y-auto p-4 flex flex-col">
-                    {hasPermission('dashboard') && <NavItem path="/" icon="LayoutDashboard" label="Дашборд" />}
-                    {hasPermission('projects') && <NavItem path="/projects" icon="Building2" label="Объекты" />}
-                    {hasPermission('finances') && <NavItem path="/finances" icon="DollarSign" label="Финансы" />}
-                    {hasPermission('commercial') && <NavItem path="/commercial" icon="FileText" label="КП" />}
-                    {hasPermission('employees') && <NavItem path="/employees" icon="Users" label="Сотрудники" />}
-                    {hasPermission('tasks') && <NavItem path="/tasks" icon="CheckSquare" label="Задачи" />}
+                    {hasPermission('dashboard') && <NavItem id="tour-dashboard" path="/" icon="LayoutDashboard" label="Дашборд" />}
+                    {hasPermission('projects') && <NavItem id="tour-projects" path="/projects" icon="Building2" label="Объекты" />}
+                    {hasPermission('finances') && <NavItem id="tour-finances" path="/finances" icon="DollarSign" label="Финансы" />}
+                    {hasPermission('commercial') && <NavItem id="tour-commercial" path="/commercial" icon="FileText" label="КП" />}
+                    {hasPermission('employees') && <NavItem id="tour-employees" path="/employees" icon="Users" label="Сотрудники" />}
+                    {hasPermission('tasks') && <NavItem id="tour-tasks" path="/tasks" icon="CheckSquare" label="Задачи" />}
 
                     <div className="mt-auto pt-4 border-t">
                         {hasPermission('admin') && <NavItem path="/admin" icon="Shield" label="Админ-панель" />}
